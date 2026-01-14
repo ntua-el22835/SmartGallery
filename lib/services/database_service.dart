@@ -2,13 +2,13 @@ import 'package:smartgallery/models/photo.dart';
 import 'package:smartgallery/models/person.dart';
 import 'package:smartgallery/models/location.dart';
 import 'package:smartgallery/models/user.dart';
+import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:logging/logging.dart';
 import 'dart:io';
-import 'dart:convert'; // για jsonEncode/jsonDecode
 
-// Εισαγωγές για desktop platforms (platform-specific imports)
+// Platform-specific imports for desktop
 import 'package:sqflite_common_ffi/sqflite_ffi.dart' if (dart.library.html) 'package:sqflite_common_ffi_stub/sqflite_ffi_stub.dart';
 
 /// Service για τη διαχείριση της βάσης δεδομένων SQLite
@@ -18,21 +18,18 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart' if (dart.library.html) 'pac
 /// - Photos (φωτογραφίες)
 /// - Persons (αναγνωρισμένα πρόσωπα)
 /// - Locations (τοποθεσίες)
-/// - Users (χρήστες) 
-
-/// Κλάση DatabaseService
+/// - Users (χρήστες)
 class DatabaseService {
   final log = Logger('DatabaseServiceLogger');
   Database? _database;
   String dbfile = "smartgallery.db";
 
-  /// Ανάκτηση instance της βάσης δεδομένων
   Future<Database> get database async {
     if (_database != null) {
       log.config("get database called, return instance");
       return _database!;
     }
-    _database = await initDB(); // Αρχικοποίηση της βάσης δεδομένων
+    _database = await initDB();
     log.config("get database called, return initDB");
     return _database!;
   }
@@ -45,7 +42,7 @@ class DatabaseService {
     log.config("initDB called, Platform: ${Platform.operatingSystem}");
     
     if (Platform.isWindows || Platform.isLinux) {
-      // Desktop: Χρήση sqflite_common_ffi
+      // Desktop: Use sqflite_common_ffi
       sqfliteFfiInit();
       final databaseFactory = databaseFactoryFfi;
       final appDocumentsDir = await getApplicationDocumentsDirectory();
@@ -59,18 +56,17 @@ class DatabaseService {
         ),
       );
     } else if (Platform.isAndroid || Platform.isIOS || Platform.isMacOS) {
-      // Mobile (Android/iOS/macOS): Χρήση κανονικού sqflite
+      // Mobile (Android/iOS/macOS): Use regular sqflite
       final documentsDirectory = await getApplicationDocumentsDirectory();
       final path = join(documentsDirectory.path, dbfile);
       
-      // Άνοιγμα της βάσης δεδομένων
       return await openDatabase(
         path,
         version: 1,
         onCreate: _onCreate,
       );
     }
-    throw Exception("Unsupported platform: ${Platform.operatingSystem}"); // Πετάει error αν το platform δεν υποστηρίζεται
+    throw Exception("Unsupported platform: ${Platform.operatingSystem}");
   }
 
   /// Δημιουργία tables
@@ -126,14 +122,11 @@ class DatabaseService {
         username TEXT NOT NULL,
         email TEXT,
         profile_image_url TEXT,
-        favorite_photo_ids TEXT,
-        recent_photo_ids TEXT,
-        category_preferences TEXT,
         auto_categorize_enabled INTEGER DEFAULT 1
       )
     ''');
     
-    // Photo-Persons junction table (many-to-many / junction table για σχέσεις πολλά-προς-πολλά)
+    // Photo-Persons junction table (many-to-many)
     await db.execute('''
       CREATE TABLE photo_persons (
         photo_id INTEGER NOT NULL,
@@ -147,10 +140,9 @@ class DatabaseService {
     log.config("Database tables created successfully");
   }
 
+  // ========== PHOTO METHODS ==========
   
-  // Μέθοδοι για τις φωτογραφίες
-  
-  /// Ανάκτηση φωτογραφιών από τη βάση δεδομένων με filters
+  /// Ανάκτηση φωτογραφιών από τη βάση
   /// Μπορεί να φιλτραριστεί βάσει κατηγορίας, τοποθεσίας, προσώπου, κλπ.
   Future<List<Photo>> getPhotos({
     PhotoCategory? category,
@@ -174,11 +166,6 @@ class DatabaseService {
       args.add(locationId);
     }
     
-    if (personId != null) {
-      query += ' AND id IN (SELECT photo_id FROM photo_persons WHERE person_id = ?)';
-      args.add(personId);
-    }
-    
     if (favoritesOnly == true) {
       query += ' AND is_favorite = 1';
     }
@@ -197,152 +184,75 @@ class DatabaseService {
     
     final List<Map<String, dynamic>> maps = await db.rawQuery(query, args);
     
-    // Φόρτωση related persons και locations για κάθε φωτογραφία
-    final List<Photo> photos = [];
+    // TODO: Handle person filter (requires join with photo_persons)
+    // TODO: Load related persons and locations
     
-    for (var map in maps) {
-      // Ανάλυση tags από comma-separated string
+    return List.generate(maps.length, (i) {
+      // Parse tags from JSON string
       List<String> tags = [];
-      if (map['tags'] != null && map['tags'].toString().isNotEmpty) {
+      if (maps[i]['tags'] != null && maps[i]['tags'].toString().isNotEmpty) {
         try {
           tags = List<String>.from(
-            map['tags'].toString().split(',').map((t) => t.trim()).where((t) => t.isNotEmpty)
+            maps[i]['tags'].toString().split(',').map((t) => t.trim()).where((t) => t.isNotEmpty)
           );
         } catch (e) {
-          log.warning("Σφάλμα ανάλυσης tags: $e");
+          log.warning("Error parsing tags: $e");
         }
       }
       
-      // Φόρτωση location
-      Location? location;
-      if (map['location_id'] != null) {
-        final locationMaps = await db.query(
-          'locations',
-          where: 'id = ?',
-          whereArgs: [map['location_id']],
-        );
-        if (locationMaps.isNotEmpty) {
-          location = Location.fromMap(locationMaps.first);
-        }
-      }
-
-      // Φόρτωση persons για αυτή τη φωτογραφία
-      final personMaps = await db.rawQuery('''
-        SELECT p.* FROM persons p
-        INNER JOIN photo_persons pp ON p.id = pp.person_id
-        WHERE pp.photo_id = ?
-      ''', [map['id']]);
-      final persons = personMaps.map((pMap) => Person.fromMap(pMap)).toList();
-
-      // Ανάλυση metadata από JSON string
-      Map<String, dynamic>? metadata;
-      if (map['metadata'] != null && map['metadata'].toString().isNotEmpty) {
-        try {
-          metadata = jsonDecode(map['metadata'] as String) as Map<String, dynamic>;
-        } catch (e) {
-          log.warning("Σφάλμα ανάλυσης metadata: $e");
-        }
-      }
-
-      photos.add(Photo(
-        id: map['id'],
-        filePath: map['file_path'],
-        thumbnailPath: map['thumbnail_path'],
-        dateTaken: DateTime.fromMillisecondsSinceEpoch(map['date_taken']),
-        category: _parseCategory(map['category']),
-        isFavorite: map['is_favorite'] == 1,
+      return Photo(
+        id: maps[i]['id'],
+        filePath: maps[i]['file_path'],
+        thumbnailPath: maps[i]['thumbnail_path'],
+        dateTaken: DateTime.fromMillisecondsSinceEpoch(maps[i]['date_taken']),
+        category: _parseCategory(maps[i]['category']),
+        isFavorite: maps[i]['is_favorite'] == 1,
         tags: tags,
-        location: location,
-        recognizedPersons: persons,
-        metadata: metadata,
-      ));
-    }
-    
-    return photos;
+        // TODO: Load location and persons from related tables
+      );
+    });
   }
 
   /// Αποθήκευση φωτογραφίας
   Future<int> insertPhoto(Photo photo) async {
     final db = await database;
-    final photoMap = photo.toMap();
-    photoMap.remove('id'); // Αφαίρεση id για insert
-    
-    final photoId = await db.insert(
+    return await db.insert(
       'photos',
-      photoMap,
+      {
+        'file_path': photo.filePath,
+        'thumbnail_path': photo.thumbnailPath,
+        'date_taken': photo.dateTaken.millisecondsSinceEpoch,
+        'category': photo.category.toString().split('.').last,
+        'location_id': photo.location?.id,
+        'is_favorite': photo.isFavorite ? 1 : 0,
+        'tags': photo.tags.join(','), // Store tags as comma-separated string
+        'metadata': photo.metadata?.toString(),
+      },
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
-    
-    // Αποθήκευση σχέσεων photo-persons
-    if (photo.recognizedPersons.isNotEmpty) {
-      for (var person in photo.recognizedPersons) {
-        // Προσθήκη/Ενημέρωση person αν δεν έχει id
-        int personId;
-        if (person.id != null) {
-          personId = person.id!;
-        } else {
-          personId = await upsertPerson(person);
-        }
-        
-        // Προσθήκη σχέσης στο junction table
-        await db.insert(
-          'photo_persons',
-          {
-            'photo_id': photoId,
-            'person_id': personId,
-          },
-          conflictAlgorithm: ConflictAlgorithm.ignore,
-        );
-      }
-    }
-    
-    return photoId;
   }
 
   /// Ενημέρωση φωτογραφίας
   Future<void> updatePhoto(Photo photo) async {
     if (photo.id == null) {
-      throw Exception("Δεν μπορεί να γίνει update φωτογραφίας χωρίς id");
+      throw Exception("Cannot update photo without id");
     }
     final db = await database;
-    final photoMap = photo.toMap();
-    photoMap.remove('id'); // Αφαίρεση id για update
-    
     await db.update(
       'photos',
-      photoMap,
+      {
+        'file_path': photo.filePath,
+        'thumbnail_path': photo.thumbnailPath,
+        'date_taken': photo.dateTaken.millisecondsSinceEpoch,
+        'category': photo.category.toString().split('.').last,
+        'location_id': photo.location?.id,
+        'is_favorite': photo.isFavorite ? 1 : 0,
+        'tags': photo.tags.join(','), // Store tags as comma-separated string
+        'metadata': photo.metadata?.toString(),
+      },
       where: 'id = ?',
       whereArgs: [photo.id],
     );
-    
-    // Ενημέρωση σχέσεων photo-persons
-    if (photo.recognizedPersons.isNotEmpty) {
-      // Διαγραφή παλιών σχέσεων
-      await db.delete(
-        'photo_persons',
-        where: 'photo_id = ?',
-        whereArgs: [photo.id],
-      );
-      
-      // Προσθήκη νέων σχέσεων
-      for (var person in photo.recognizedPersons) {
-        int personId;
-        if (person.id != null) {
-          personId = person.id!;
-        } else {
-          personId = await upsertPerson(person);
-        }
-        
-        await db.insert(
-          'photo_persons',
-          {
-            'photo_id': photo.id,
-            'person_id': personId,
-          },
-          conflictAlgorithm: ConflictAlgorithm.ignore,
-        );
-      }
-    }
   }
 
   /// Διαγραφή φωτογραφίας
@@ -370,14 +280,21 @@ class DatabaseService {
     return result;
   }
 
-
-  // Μέθοδοι για τα πρόσωπα
+  // ========== PERSON METHODS ==========
   
   /// Ανάκτηση όλων των αναγνωρισμένων προσώπων
   Future<List<Person>> getAllPersons() async {
     final db = await database;
     final List<Map<String, dynamic>> maps = await db.query('persons');
-    return maps.map((map) => Person.fromMap(map)).toList();
+    return List.generate(maps.length, (i) {
+      return Person(
+        id: maps[i]['id'],
+        name: maps[i]['name'],
+        faceId: maps[i]['face_id'],
+        photoId: maps[i]['photo_id'],
+        confidence: maps[i]['confidence']?.toDouble(),
+      );
+    });
   }
 
   /// Ανάκτηση φωτογραφιών ενός προσώπου
@@ -405,13 +322,15 @@ class DatabaseService {
   /// Προσθήκη/Ενημέρωση προσώπου
   Future<int> upsertPerson(Person person) async {
     final db = await database;
-    final personMap = person.toMap();
-    
     if (person.id != null) {
-      personMap.remove('id'); // Αφαίρεση id για update
       await db.update(
         'persons',
-        personMap,
+        {
+          'name': person.name,
+          'face_id': person.faceId,
+          'confidence': person.confidence,
+          'face_coordinates': person.faceCoordinates?.toString(),
+        },
         where: 'id = ?',
         whereArgs: [person.id],
       );
@@ -419,7 +338,13 @@ class DatabaseService {
     } else {
       return await db.insert(
         'persons',
-        personMap,
+        {
+          'name': person.name,
+          'face_id': person.faceId,
+          'photo_id': person.photoId,
+          'confidence': person.confidence,
+          'face_coordinates': person.faceCoordinates?.toString(),
+        },
       );
     }
   }
@@ -434,14 +359,23 @@ class DatabaseService {
     );
   }
 
-
-  // Μέθοδοι για τις τοποθεσίες
+  // ========== LOCATION METHODS ==========
   
   /// Ανάκτηση όλων των τοποθεσιών
   Future<List<Location>> getAllLocations() async {
     final db = await database;
     final List<Map<String, dynamic>> maps = await db.query('locations');
-    return maps.map((map) => Location.fromMap(map)).toList();
+    return List.generate(maps.length, (i) {
+      return Location(
+        id: maps[i]['id'],
+        latitude: maps[i]['latitude'],
+        longitude: maps[i]['longitude'],
+        address: maps[i]['address'],
+        city: maps[i]['city'],
+        country: maps[i]['country'],
+        placeName: maps[i]['place_name'],
+      );
+    });
   }
 
   /// Ανάκτηση φωτογραφιών μιας τοποθεσίας
@@ -452,13 +386,17 @@ class DatabaseService {
   /// Προσθήκη/Ενημέρωση τοποθεσίας
   Future<int> upsertLocation(Location location) async {
     final db = await database;
-    final locationMap = location.toMap();
-    
     if (location.id != null) {
-      locationMap.remove('id'); // Αφαίρεση id για update
       await db.update(
         'locations',
-        locationMap,
+        {
+          'latitude': location.latitude,
+          'longitude': location.longitude,
+          'address': location.address,
+          'city': location.city,
+          'country': location.country,
+          'place_name': location.placeName,
+        },
         where: 'id = ?',
         whereArgs: [location.id],
       );
@@ -466,12 +404,19 @@ class DatabaseService {
     } else {
       return await db.insert(
         'locations',
-        locationMap,
+        {
+          'latitude': location.latitude,
+          'longitude': location.longitude,
+          'address': location.address,
+          'city': location.city,
+          'country': location.country,
+          'place_name': location.placeName,
+        },
       );
     }
   }
 
-  // Μέθοδοι για τους χρήστες
+  // ========== USER METHODS ==========
   
   /// Ανάκτηση προφίλ χρήστη
   Future<User?> getUser(int userId) async {
@@ -485,28 +430,37 @@ class DatabaseService {
     
     if (maps.isEmpty) return null;
     
-    return User.fromMap(maps.first);
+    // TODO: Load favorite and recent photo IDs from separate tables or JSON
+    return User(
+      id: maps[0]['id'],
+      username: maps[0]['username'],
+      email: maps[0]['email'],
+      profileImageUrl: maps[0]['profile_image_url'],
+      autoCategorizeEnabled: maps[0]['auto_categorize_enabled'] == 1,
+    );
   }
 
   /// Ενημέρωση προφίλ χρήστη
   Future<void> updateUser(User user) async {
     if (user.id == null) {
-      throw Exception("Δεν μπορεί να γίνει update χρήστη χωρίς id");
+      throw Exception("Cannot update user without id");
     }
     final db = await database;
-    final userMap = user.toMap();
-    userMap.remove('id'); // Αφαίρεση id για update
-    
     await db.update(
       'users',
-      userMap,
+      {
+        'username': user.username,
+        'email': user.email,
+        'profile_image_url': user.profileImageUrl,
+        'auto_categorize_enabled': user.autoCategorizeEnabled ? 1 : 0,
+      },
       where: 'id = ?',
       whereArgs: [user.id],
     );
   }
 
-
-  // Βοηθητικές μέθοδοι
+  // ========== HELPER METHODS ==========
+  
   PhotoCategory _parseCategory(String categoryString) {
     switch (categoryString.toLowerCase()) {
       case 'portrait':
@@ -530,7 +484,7 @@ class DatabaseService {
 
   /// Αρχικοποίηση της βάσης δεδομένων
   Future<void> initializeDatabase() async {
-    await database; // Αυτό θα δημιουργήσει τη βάση αν δεν υπάρχει
+    await database; // This will create the database if it doesn't exist
     log.config("Database initialized successfully");
   }
 }
