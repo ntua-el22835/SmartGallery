@@ -1,3 +1,5 @@
+import 'dart:convert'; // for jsonDecode
+
 /// Model class για τον χρήστη
 /// 
 /// Περιέχει τις βασικές πληροφορίες του χρήστη
@@ -12,6 +14,7 @@ class User {
   final Map<String, bool> categoryPreferences; // Preferred categories to show
   final bool autoCategorizeEnabled; // Auto-categorization enabled/disabled
 
+  /// Constructor για το User object
   User({
     this.id,
     required this.username,
@@ -25,8 +28,38 @@ class User {
         recentPhotoIds = recentPhotoIds ?? [],
         categoryPreferences = categoryPreferences ?? {};
 
-  // TODO: Προσθήκη methods για serialization/deserialization
-  // Map<String, dynamic> toMap() { ... }
-  // User.fromMap(Map<String, dynamic> map) { ... }
+  
+  /// Μετατρέπει User object σε Map για αποθήκευση στη βάση
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'username': username,
+      'email': email,
+      'profile_image_url': profileImageUrl,
+      'favorite_photo_ids': jsonEncode(favoritePhotoIds), // List<int> → JSON string
+      'recent_photo_ids': jsonEncode(recentPhotoIds), // List<int> → JSON string
+      'category_preferences': jsonEncode(categoryPreferences), // Map → JSON string
+      'auto_categorize_enabled': autoCategorizeEnabled ? 1 : 0, // bool → int
+    };
+  }
+
+  /// Δημιουργεί User object από Map (από τη βάση)
+  User.fromMap(Map<String, dynamic> map)
+    : id = map['id'] as int?,
+      username = map['username'] as String,
+      email = map['email'] as String?,
+      profileImageUrl = map['profile_image_url'] as String?,
+      favoritePhotoIds = map['favorite_photo_ids'] != null
+          ? List<int>.from(jsonDecode(map['favorite_photo_ids'] as String))
+          : [], // JSON string → List<int>
+      recentPhotoIds = map['recent_photo_ids'] != null
+          ? List<int>.from(jsonDecode(map['recent_photo_ids'] as String))
+          : [], // JSON string → List<int>
+      categoryPreferences = map['category_preferences'] != null
+          ? Map<String, bool>.from(
+              jsonDecode(map['category_preferences'] as String) as Map
+            )
+          : {}, // JSON string → Map<String, bool>
+      autoCategorizeEnabled = (map['auto_categorize_enabled'] as int? ?? 1) == 1; // int → bool
 }
 
