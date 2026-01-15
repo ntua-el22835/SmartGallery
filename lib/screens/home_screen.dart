@@ -1,3 +1,4 @@
+
 import 'package:flutter/material.dart';
 import 'package:smartgallery/models/photo.dart';
 import 'package:smartgallery/screens/photo_detail_screen.dart';
@@ -5,6 +6,19 @@ import 'package:smartgallery/screens/search_screen.dart';
 import 'package:smartgallery/services/database_service.dart';
 import 'package:smartgallery/services/camera_service.dart';
 import 'package:smartgallery/theme/app_theme.dart';
+
+// Placeholder για το glass navigation bar ώστε να μην υπάρχει undefined error
+Widget _buildGlassNavigationBar() {
+  return BottomNavigationBar(
+    items: const [
+      BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
+      BottomNavigationBarItem(icon: Icon(Icons.search), label: 'Search'),
+      BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
+    ],
+    currentIndex: 0,
+    onTap: (index) {},
+  );
+}
 
 /// Αρχική οθόνη - Home Screen (Gallery View)
 /// 
@@ -189,20 +203,29 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(22),
-          child: photo.imagePath != null
+          child: (photo.filePath.isNotEmpty)
               ? Image.asset(
-                  photo.imagePath!,
+                  photo.filePath,
                   fit: BoxFit.cover,
                   errorBuilder: (context, error, stackTrace) => const Icon(Icons.image, color: Colors.white30),
                 )
               : Container(
                   color: AppTheme.photoPlaceholderColor,
                   child: const Icon(Icons.image, color: Colors.white30),
-    // TODO: Implement filters with DatabaseService
+                ),
+        ),
+      ),
+    );
   }
 
-  void _showSortMenu() {
-    // TODO: Implement sorting with DatabaseService  borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+
+  void _showFilterMenu() {
+    // TODO: Implement filter menu
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (context) => Container(
         padding: const EdgeInsets.all(20),

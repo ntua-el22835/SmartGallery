@@ -6,8 +6,16 @@ import 'package:flutter/material.dart';
 /// - Dark theme (black background)
 /// - Neumorphic UI elements
 /// - White text/icons
+import 'package:flutter/material.dart';
+
+
 class AppTheme {
   // Colors από Figma FinalUI Design
+  static const Color buttonText = Color(0xFFFFFFFF);
+  static const Color buttonColor = Color(0xFFFFFFFF);
+  static const Color glass3 = Color(0xFFFFFFFF);
+  static const Color glass2 = Color(0xFFFFFFFF);
+  static const Color glass1 = Color(0xFFFFFFFF);
   static const Color backgroundColor = Color(0xFF000000); // Pure black
   static const Color surfaceColor = Color(0xFF1A1A1A); // Dark surface
   static const Color photoPlaceholderColor = Color(0xFFD9D9D9); // Light gray for photos
@@ -15,7 +23,28 @@ class AppTheme {
   static const Color textColor = Colors.white;
   static const Color iconColor = Colors.white;
   static const Color glassColor = Color(0x0DFFFFFF); // Glass effect rgba(255,255,255,0.02)
-  
+  static const double globalHeight = 24.0;
+
+  // Example of glass effect as a BoxDecoration
+  static BoxDecoration glassEffect1 = BoxDecoration(
+    color: glass1.withOpacity(0.2),
+    backgroundBlendMode: BlendMode.overlay,
+    boxShadow: [
+      BoxShadow(
+        color: Color(0x66FFFFFF),
+        offset: Offset(0, 2),
+        blurRadius: 4,
+        spreadRadius: 0,
+      ),
+      BoxShadow(
+        color: Color(0x33000000),
+        offset: Offset(0, -2),
+        blurRadius: 4,
+        spreadRadius: 0,
+      ),
+    ],
+  );
+
   static ThemeData get darkTheme {
     return ThemeData(
       useMaterial3: true,
@@ -66,7 +95,7 @@ class AppTheme {
       ),
     );
   }
-  
+
   /// Helper για neumorphic shadow effect
   static List<BoxShadow> getNeumorphicShadow(bool isPressed) {
     if (isPressed) {
