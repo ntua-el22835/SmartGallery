@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:smartgallery/models/photo.dart';
 import 'package:smartgallery/screens/photo_detail_screen.dart';
 import 'package:smartgallery/screens/search_screen.dart';
+import 'package:smartgallery/services/database_service.dart';
+import 'package:smartgallery/services/camera_service.dart';
+import 'package:smartgallery/theme/app_theme.dart';
 
 /// Αρχική οθόνη - Home Screen (Gallery View)
 /// 
@@ -17,57 +20,83 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  // TODO: Load photos from database
-  final List<Photo> _allPhotos = [];
+  late List<Photo> _allPhotos = [];
+  late List<Photo> _filteredPhotos = [];
   String? _selectedFilter;
   bool _isMenuExpanded = false;
+  bool _isLoading = true;
+  final _databaseService = DatabaseService();
+  final _cameraService = CameraService();
 
   @override
   void initState() {
     super.initState();
-    // TODO: Load data from services
-    // TODO: Load photos from DatabaseService
+    _loadPhotos();
+  }
+
+  Future<void> _loadPhotos() async {
+    try {
+      final photos = await _databaseService.getPhotos();
+      setState(() {
+        _allPhotos = photos;
+        _filteredPhotos = photos;
+        _isLoading = false;
+      });
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error loading photos: $e')),
+        );
+      }
+      setState(() => _isLoading = false);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
     return Scaffold(
       body: CustomScrollView(
         slivers: [
           _buildCustomHeader(),
-          SliverPadding(
-            padding: const EdgeInsets.all(8),
-            sliver: SliverGrid(
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 3,
-                crossAxisSpacing: 4,
-                mainAxisSpacing: 4,
+          if (_filteredPhotos.isEmpty)
+            SliverFillRemaining(
+              child: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.image_not_supported, size: 64, color: Colors.white30),
+                    const SizedBox(height: 16),
+                    const Text('No photos yet', style: TextStyle(color: Colors.white70)),
+                  ],
+                ),
               ),
-              delegate: SliverChildBuilderDelegate(
-                (context, index) {
-                  if (index >= _allPhotos.length) {
-                    return Container(
-                      color: Colors.grey[800],
-                      child: const Center(
-                        child: Icon(Icons.image, color: Colors.white30),
-                      ),
-                    );
-                  }
-                  return _buildPhotoThumbnail(_allPhotos[index]);
-                },
-                childCount: _allPhotos.isEmpty ? 12 : _allPhotos.length,
+            )
+          else
+            SliverPadding(
+              padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 16),
+              sliver: SliverGrid(
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 3,
+                  crossAxisSpacing: 12,
+                  mainAxisSpacing: 12,
+                  childAspectRatio: 1,
+                ),
+                delegate: SliverChildBuilderDelegate(
+                  (context, index) => _buildPhotoThumbnail(_filteredPhotos[index]),
+                  childCount: _filteredPhotos.length,
+                ),
               ),
             ),
-          ),
+          SliverPadding(padding: const EdgeInsets.only(bottom: 100)),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          // TODO: Open camera to take photo
-        },
-        tooltip: 'Take Photo',
-        child: const Icon(Icons.camera_alt),
-      ),
+      bottomNavigationBar: _buildGlassNavigationBar(),
     );
   }
 
@@ -154,26 +183,26 @@ class _HomeScreenState extends State<HomeScreen> {
         );
       },
       child: Container(
-        color: Colors.grey[800],
-        child: photo.thumbnailPath != null
-            ? Image.asset(
-                photo.thumbnailPath!,
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) {
-                  return const Icon(Icons.image, color: Colors.white30);
-                },
-              )
-            : const Icon(Icons.image, color: Colors.white30),
-      ),
-    );
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(22),
+          color: AppTheme.photoPlaceholderColor,
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(22),
+          child: photo.imagePath != null
+              ? Image.asset(
+                  photo.imagePath!,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) => const Icon(Icons.image, color: Colors.white30),
+                )
+              : Container(
+                  color: AppTheme.photoPlaceholderColor,
+                  child: const Icon(Icons.image, color: Colors.white30),
+    // TODO: Implement filters with DatabaseService
   }
 
-  void _showFilterMenu() {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Theme.of(context).colorScheme.surface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+  void _showSortMenu() {
+    // TODO: Implement sorting with DatabaseService  borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (context) => Container(
         padding: const EdgeInsets.all(20),

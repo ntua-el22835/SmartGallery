@@ -7,12 +7,14 @@ import 'package:flutter/material.dart';
 /// - Neumorphic UI elements
 /// - White text/icons
 class AppTheme {
-  // Colors από Figma
-  static const Color backgroundColor = Color(0xFF1A1A1A); // Dark gray/black
-  static const Color surfaceColor = Color(0xFF2A2A2A); // Slightly lighter for cards
-  static const Color primaryColor = Color(0xFF0175C2); // Blue accent
+  // Colors από Figma FinalUI Design
+  static const Color backgroundColor = Color(0xFF000000); // Pure black
+  static const Color surfaceColor = Color(0xFF1A1A1A); // Dark surface
+  static const Color photoPlaceholderColor = Color(0xFFD9D9D9); // Light gray for photos
+  static const Color primaryColor = Color(0xFFFFFFFF); // White for primary actions
   static const Color textColor = Colors.white;
   static const Color iconColor = Colors.white;
+  static const Color glassColor = Color(0x0DFFFFFF); // Glass effect rgba(255,255,255,0.02)
   
   static ThemeData get darkTheme {
     return ThemeData(
@@ -41,17 +43,17 @@ class AppTheme {
         ),
       ),
       textTheme: const TextTheme(
-        displayLarge: TextStyle(color: Colors.white, fontFamily: 'SF Pro'),
-        displayMedium: TextStyle(color: Colors.white, fontFamily: 'SF Pro'),
-        displaySmall: TextStyle(color: Colors.white, fontFamily: 'SF Pro'),
-        headlineLarge: TextStyle(color: Colors.white, fontFamily: 'SF Pro'),
-        headlineMedium: TextStyle(color: Colors.white, fontFamily: 'SF Pro'),
-        headlineSmall: TextStyle(color: Colors.white, fontFamily: 'SF Pro'),
-        titleLarge: TextStyle(color: Colors.white, fontFamily: 'SF Pro', fontSize: 20),
-        titleMedium: TextStyle(color: Colors.white, fontFamily: 'SF Pro', fontSize: 15),
-        bodyLarge: TextStyle(color: Colors.white, fontFamily: 'SF Pro'),
-        bodyMedium: TextStyle(color: Colors.white, fontFamily: 'SF Pro'),
-        bodySmall: TextStyle(color: Colors.white70, fontFamily: 'SF Pro'),
+        displayLarge: TextStyle(color: Colors.white, fontFamily: 'SF Pro', fontWeight: FontWeight.bold),
+        displayMedium: TextStyle(color: Colors.white, fontFamily: 'SF Pro', fontWeight: FontWeight.bold),
+        displaySmall: TextStyle(color: Colors.white, fontFamily: 'SF Pro', fontWeight: FontWeight.bold),
+        headlineLarge: TextStyle(color: Colors.white, fontFamily: 'SF Pro', fontWeight: FontWeight.bold),
+        headlineMedium: TextStyle(color: Colors.white, fontFamily: 'SF Pro', fontWeight: FontWeight.w600),
+        headlineSmall: TextStyle(color: Colors.white, fontFamily: 'SF Pro', fontWeight: FontWeight.w600),
+        titleLarge: TextStyle(color: Colors.white, fontFamily: 'SF Pro', fontSize: 20, fontWeight: FontWeight.bold),
+        titleMedium: TextStyle(color: Colors.white, fontFamily: 'SF Pro', fontSize: 15, fontWeight: FontWeight.w600),
+        bodyLarge: TextStyle(color: Colors.white, fontFamily: 'SF Pro', fontSize: 16),
+        bodyMedium: TextStyle(color: Colors.white, fontFamily: 'SF Pro', fontSize: 14),
+        bodySmall: TextStyle(color: Colors.white70, fontFamily: 'SF Pro', fontSize: 12),
       ),
       iconTheme: const IconThemeData(
         color: Colors.white,
