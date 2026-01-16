@@ -72,15 +72,19 @@ class _ExploreScreenState extends State<ExploreScreen> {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Text(
-              'Smart Gallery',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
+            Flexible(
+              child: Text(
+                'Smart Gallery',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+                overflow: TextOverflow.ellipsis,
               ),
             ),
             Row(
+              mainAxisAlignment: MainAxisAlignment.end,
               children: [
                 Text(
                   dateStr,

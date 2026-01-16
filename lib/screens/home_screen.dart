@@ -7,18 +7,6 @@ import 'package:smartgallery/services/database_service.dart';
 import 'package:smartgallery/services/camera_service.dart';
 import 'package:smartgallery/theme/app_theme.dart';
 
-// Placeholder για το glass navigation bar ώστε να μην υπάρχει undefined error
-Widget _buildGlassNavigationBar() {
-  return BottomNavigationBar(
-    items: const [
-      BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-      BottomNavigationBarItem(icon: Icon(Icons.search), label: 'Search'),
-      BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
-    ],
-    currentIndex: 0,
-    onTap: (index) {},
-  );
-}
 
 /// Αρχική οθόνη - Home Screen (Gallery View)
 /// 
@@ -110,7 +98,6 @@ class _HomeScreenState extends State<HomeScreen> {
           SliverPadding(padding: const EdgeInsets.only(bottom: 100)),
         ],
       ),
-      bottomNavigationBar: _buildGlassNavigationBar(),
     );
   }
 

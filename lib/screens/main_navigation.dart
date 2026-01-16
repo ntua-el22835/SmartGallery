@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:smartgallery/screens/home_screen.dart';
 import 'package:smartgallery/screens/albums_screen.dart';
-import 'package:smartgallery/screens/explore_screen.dart';
+import 'package:smartgallery/screens/camera_screen.dart';
 
 /// Main Navigation Screen με Bottom Navigation Bar
 /// 
@@ -20,9 +20,9 @@ class _MainNavigationState extends State<MainNavigation> {
   int _currentIndex = 0;
 
   final List<Widget> _screens = [
+    const CameraScreen(),
     const HomeScreen(),
     const AlbumsScreen(),
-    const ExploreScreen(),
   ];
 
   @override
@@ -33,13 +33,11 @@ class _MainNavigationState extends State<MainNavigation> {
         children: _screens,
       ),
       bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _currentIndex,
-        onTap: (index) {
-          setState(() {
-            _currentIndex = index;
-          });
-        },
         items: const [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.camera_alt),
+            label: 'Camera',
+          ),
           BottomNavigationBarItem(
             icon: Icon(Icons.home),
             label: 'Home',
@@ -48,11 +46,13 @@ class _MainNavigationState extends State<MainNavigation> {
             icon: Icon(Icons.photo_library),
             label: 'Albums',
           ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.grid_view),
-            label: 'Explore',
-          ),
         ],
+        currentIndex: _currentIndex,
+        onTap: (index) {
+          setState(() {
+            _currentIndex = index;
+          });
+        },
       ),
     );
   }
