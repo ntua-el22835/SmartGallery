@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-bool _sortMenuOpen = false;
-String _sortType = 'date'; // 'date' or 'name'
 
 /// Albums Screen
 /// 
@@ -14,40 +12,13 @@ class AlbumsScreen extends StatefulWidget {
 }
 
 class _AlbumsScreenState extends State<AlbumsScreen> {
-    Widget _buildFilterSortBar() {
-      return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.end,
-          children: [
-            IconButton(
-              icon: Icon(Icons.filter_alt, color: _filterOpen ? Colors.white : Colors.white38),
-              onPressed: () {
-                setState(() {
-                  _filterOpen = !_filterOpen;
-                });
-              },
-            ),
-            IconButton(
-              icon: Icon(Icons.sort, color: _sortMenuOpen ? Colors.white : Colors.white38),
-              onPressed: () {
-                setState(() {
-                  _sortMenuOpen = !_sortMenuOpen;
-                });
-              },
-            ),
-          ],
-        ),
-      );
-    }
-
-    // ...κρατάμε μόνο μία έκδοση της _buildFilterMenu παρακάτω...
-
-    // ...κρατάμε μόνο μία έκδοση της _buildTagsBar παρακάτω...
+  // State variables
   final List<Map<String, dynamic>> _albums = [];
-  bool _filterOpen = false;
-  // αφαιρέθηκε, χρησιμοποιούμε _sortMenuOpen και _sortType
+  bool _filterMenuOpen = false;
+  bool _sortOptionsOpen = false;
+  String _sortType = 'date'; // 'date' or 'name'
   List<String> _selectedTags = [];
+  bool _showTagsMenu = false;
   bool _isEmpty = false;
 
   @override
@@ -58,20 +29,20 @@ class _AlbumsScreenState extends State<AlbumsScreen> {
 
   @override
   Widget build(BuildContext context) {
-        // Ταξινόμηση albums σύμφωνα με _sortType
-        List<Map<String, dynamic>> sortedAlbums = List.from(_albums);
-        if (_sortType == 'date') {
-          sortedAlbums.sort((a, b) => (b['date'] ?? '').compareTo(a['date'] ?? ''));
-        } else {
-          sortedAlbums.sort((a, b) => (a['name'] ?? '').compareTo(b['name'] ?? ''));
-        }
+    // Ταξινόμηση albums σύμφωνα με _sortType
+    List<Map<String, dynamic>> sortedAlbums = List.from(_albums);
+    if (_sortType == 'date') {
+      sortedAlbums.sort((a, b) => (b['date'] ?? '').compareTo(a['date'] ?? ''));
+    } else {
+      sortedAlbums.sort((a, b) => (a['name'] ?? '').compareTo(b['name'] ?? ''));
+    }
     return Scaffold(
       body: CustomScrollView(
         slivers: [
           _buildCustomHeader(),
-          SliverToBoxAdapter(child: _buildFilterSortBar()),
-          if (_sortMenuOpen) SliverToBoxAdapter(child: _buildSortMenu()),
-          if (_filterOpen) SliverToBoxAdapter(child: _buildFilterMenu()),
+          SliverToBoxAdapter(child: _buildAlbumFilterMenu()),
+          if (_sortOptionsOpen) SliverToBoxAdapter(child: _buildSortMenu()),
+          if (_filterMenuOpen && _showTagsMenu) SliverToBoxAdapter(child: _buildFilterMenu()),
           if (_selectedTags.isNotEmpty) SliverToBoxAdapter(child: _buildTagsBar()),
           _isEmpty
               ? SliverFillRemaining(
@@ -91,7 +62,6 @@ class _AlbumsScreenState extends State<AlbumsScreen> {
                     ),
                   ),
                 ),
-  // ...η μέθοδος _buildSortMenu πρέπει να είναι μέλος της κλάσης, όχι μέσα στη build ή σε λάθος σημείο...
         ],
       ),
     );
@@ -100,7 +70,6 @@ class _AlbumsScreenState extends State<AlbumsScreen> {
   Widget _buildCustomHeader() {
     final now = DateTime.now();
     final dateStr = _formatDate(now);
-    
     return SliverAppBar(
       expandedHeight: 60,
       floating: false,
@@ -130,81 +99,189 @@ class _AlbumsScreenState extends State<AlbumsScreen> {
         ),
       ),
     );
+  }
 
   // αφαιρέθηκε η διπλή έκδοση, κρατάμε μόνο το SliverAppBar
 
   // ...κρατάω μόνο μία έκδοση της _buildFilterMenu παρακάτω...
 
-  // κρατάμε μόνο την έκδοση με _sortMenuOpen
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.end,
-        children: [
-          IconButton(
-            icon: Icon(Icons.filter_alt, color: _filterOpen ? Colors.white : Colors.white38),
+  // (Διορθώθηκε: δεν υπάρχει widget tree εκτός μεθόδου)
+    Widget _buildSortMenu() {
+      return Container(
+        color: Colors.black54,
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Sort albums by:', style: TextStyle(color: Colors.white)),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              children: [
+                ChoiceChip(
+                  label: const Text('Date'),
+                  selected: _sortType == 'date',
+                  shape: const StadiumBorder(),
+                  onSelected: (val) {
+                    setState(() {
+                      _sortType = 'date';
+                      _sortOptionsOpen = false;
+                    });
+                  },
+                  selectedColor: Colors.white,
+                  backgroundColor: Colors.grey[800],
+                  labelStyle: TextStyle(color: _sortType == 'date' ? Colors.black : Colors.white),
+                ),
+                ChoiceChip(
+                  label: const Text('Name'),
+                  selected: _sortType == 'name',
+                  shape: const StadiumBorder(),
+                  onSelected: (val) {
+                    setState(() {
+                      _sortType = 'name';
+                      _sortOptionsOpen = false;
+                    });
+                  },
+                  selectedColor: Colors.white,
+                  backgroundColor: Colors.grey[800],
+                  labelStyle: TextStyle(color: _sortType == 'name' ? Colors.black : Colors.white),
+                ),
+              ],
+            ),
+          ],
+        ),
+      );
+    }
+  Widget _buildAlbumFilterMenu() {
+    // Αρχικά μόνο το filter button
+    if (!_filterMenuOpen) {
+      return Align(
+        alignment: Alignment.topRight,
+        child: Padding(
+          padding: const EdgeInsets.only(top: 16, right: 16),
+          child: FloatingActionButton(
+            heroTag: 'filter',
+            mini: true,
+            backgroundColor: Colors.white12,
+                shape: const CircleBorder(),
+                child: Image.asset('assets/icons/Filter.png', width: 24, height: 24, color: Colors.white),
             onPressed: () {
               setState(() {
-                _filterOpen = !_filterOpen;
+                _filterMenuOpen = true;
+                _showTagsMenu = false;
               });
             },
           ),
-          IconButton(
-            icon: Icon(Icons.sort, color: _sortMenuOpen ? Colors.white : Colors.white38),
-            onPressed: () {
-              setState(() {
-                _sortMenuOpen = !_sortMenuOpen;
-              });
-            },
-          ),
-        ],
+        ),
+      );
+    }
+    // Όταν ανοίξει, δείχνει τα 4 κουμπιά κάθετα
+    return Align(
+      alignment: Alignment.topRight,
+      child: Padding(
+        padding: const EdgeInsets.only(top: 16, right: 16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            // Κουμπί collapse (down arrow)
+            FloatingActionButton(
+              heroTag: 'collapse',
+              mini: true,
+              backgroundColor: Colors.white12,
+                    shape: const CircleBorder(),
+                    child: Image.asset('assets/icons/Down arrow.png', width: 24, height: 24, color: Colors.white),
+              onPressed: () {
+                setState(() {
+                  _filterMenuOpen = false;
+                  _sortOptionsOpen = false;
+                  _showTagsMenu = false;
+                });
+              },
+            ),
+            const SizedBox(height: 8),
+            // Sort by (up-down arrow)
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                FloatingActionButton(
+                  heroTag: 'sort',
+                  mini: true,
+                  backgroundColor: Colors.white12,
+                      shape: const CircleBorder(),
+                      child: Image.asset('assets/icons/sort by (up and down arrow).png', width: 24, height: 24, color: Colors.white),
+                  onPressed: () {
+                    setState(() {
+                      _sortOptionsOpen = !_sortOptionsOpen;
+                    });
+                  },
+                ),
+                if (_sortOptionsOpen) ...[
+                  const SizedBox(width: 8),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white24,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        GestureDetector(
+                          onTap: () {
+                            setState(() {
+                              _sortType = 'date';
+                              _sortOptionsOpen = false;
+                            });
+                          },
+                          child: Text('Date', style: TextStyle(color: _sortType == 'date' ? Colors.amber : Colors.white)),
+                        ),
+                        const SizedBox(width: 8),
+                        GestureDetector(
+                          onTap: () {
+                            setState(() {
+                              _sortType = 'name';
+                              _sortOptionsOpen = false;
+                            });
+                          },
+                          child: Text('Name', style: TextStyle(color: _sortType == 'name' ? Colors.amber : Colors.white)),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ],
+            ),
+            const SizedBox(height: 8),
+            // Hashtags (τριλίζα)
+            FloatingActionButton(
+              heroTag: 'hashtags',
+              mini: true,
+              backgroundColor: Colors.white12,
+                    shape: const CircleBorder(),
+                    child: Image.asset('assets/icons/Hash.png', width: 24, height: 24, color: Colors.white),
+              onPressed: () {
+                setState(() {
+                  _showTagsMenu = !_showTagsMenu;
+                });
+              },
+            ),
+            const SizedBox(height: 8),
+            // Shuffle (shuffle icon)
+            FloatingActionButton(
+              heroTag: 'shuffle',
+              mini: true,
+              backgroundColor: Colors.white12,
+                    shape: const CircleBorder(),
+                    child: Image.asset('assets/icons/Shuffle.png', width: 24, height: 24, color: Colors.white),
+              onPressed: () {},
+            ),
+          ],
+        ),
       ),
     );
   }
-  Widget _buildSortMenu() {
-    return Container(
-      color: Colors.black54,
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('Sort albums by:', style: TextStyle(color: Colors.white)),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 8,
-            children: [
-              ChoiceChip(
-                label: Text('Date'),
-                selected: _sortType == 'date',
-                onSelected: (val) {
-                  setState(() {
-                    _sortType = 'date';
-                    _sortMenuOpen = false;
-                  });
-                },
-                selectedColor: Colors.white,
-                backgroundColor: Colors.grey[800],
-                labelStyle: TextStyle(color: _sortType == 'date' ? Colors.black : Colors.white),
-              ),
-              ChoiceChip(
-                label: Text('Name'),
-                selected: _sortType == 'name',
-                onSelected: (val) {
-                  setState(() {
-                    _sortType = 'name';
-                    _sortMenuOpen = false;
-                  });
-                },
-                selectedColor: Colors.white,
-                backgroundColor: Colors.grey[800],
-                labelStyle: TextStyle(color: _sortType == 'name' ? Colors.black : Colors.white),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
+
 
   Widget _buildFilterMenu() {
     // Dummy filter menu for demonstration
@@ -222,6 +299,7 @@ class _AlbumsScreenState extends State<AlbumsScreen> {
               return FilterChip(
                 label: Text(tag),
                 selected: selected,
+                shape: const StadiumBorder(),
                 onSelected: (val) {
                   setState(() {
                     if (val) {

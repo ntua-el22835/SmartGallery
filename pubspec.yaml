@@ -101,6 +101,11 @@ flutter:
     - assets/icons/Home.png
     - assets/icons/Icon_camera.png
     - assets/icons/Image.png
+    - assets/icons/Filter.png
+    - assets/icons/Down arrow.png
+    - assets/icons/sort by (up and down arrow).png
+    - assets/icons/Hash.png
+    - assets/icons/Shuffle.png
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images
