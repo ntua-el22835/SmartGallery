@@ -33,17 +33,32 @@ class _MainNavigationState extends State<MainNavigation> {
         children: _screens,
       ),
       bottomNavigationBar: BottomNavigationBar(
-        items: const [
+        items: [
           BottomNavigationBarItem(
-            icon: Icon(Icons.camera_alt),
+            icon: Image.asset(
+              'assets/icons/Icon_camera.png',
+              color: _currentIndex == 0 ? Colors.white : Colors.white38,
+              width: 28,
+              height: 28,
+            ),
             label: 'Camera',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.home),
+            icon: Image.asset(
+              'assets/icons/Home.png',
+              color: _currentIndex == 1 ? Colors.white : Colors.white38,
+              width: 28,
+              height: 28,
+            ),
             label: 'Home',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.photo_library),
+            icon: Image.asset(
+              'assets/icons/Image.png',
+              color: _currentIndex == 2 ? Colors.white : Colors.white38,
+              width: 28,
+              height: 28,
+            ),
             label: 'Albums',
           ),
         ],
@@ -53,6 +68,10 @@ class _MainNavigationState extends State<MainNavigation> {
             _currentIndex = index;
           });
         },
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+        selectedItemColor: Colors.white,
+        unselectedItemColor: Colors.white38,
+        showUnselectedLabels: true,
       ),
     );
   }
