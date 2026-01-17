@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 import 'package:smartgallery/models/photo.dart';
 import 'package:smartgallery/screens/photo_detail_screen.dart';
@@ -104,7 +103,6 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildCustomHeader() {
     final now = DateTime.now();
     final dateStr = _formatDate(now);
-    
     return SliverAppBar(
       expandedHeight: 60,
       floating: true,
@@ -115,14 +113,7 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Text(
-              'Smart Gallery',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
-            ),
+            Image.asset('assets/icons/smart gallery logo.png', height: 28),
             Row(
               children: [
                 Text(

@@ -23,14 +23,7 @@ class CameraScreen extends StatelessWidget {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text(
-                    'Smart Gallery',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
+                  Image.asset('assets/icons/smart gallery logo.png', height: 28),
                   Text(
                     dateStr,
                     style: const TextStyle(

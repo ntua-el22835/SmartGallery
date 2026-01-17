@@ -47,18 +47,11 @@ class _AlbumsScreenState extends State<AlbumsScreen> {
             pinned: true,
             backgroundColor: Theme.of(context).scaffoldBackgroundColor,
             flexibleSpace: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16), // κατεβάζω το header
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text(
-                    'Smart Gallery',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
+                  Image.asset('assets/icons/smart gallery logo.png', height: 28),
                   Text(
                     dateStr,
                     style: const TextStyle(
