@@ -36,10 +36,40 @@ class _AlbumsScreenState extends State<AlbumsScreen> {
     } else {
       sortedAlbums.sort((a, b) => (a['name'] ?? '').compareTo(b['name'] ?? ''));
     }
+        final now = DateTime.now();
+        final dateStr = _formatDate(now);
     return Scaffold(
       body: CustomScrollView(
         slivers: [
-          _buildCustomHeader(),
+          SliverAppBar(
+            expandedHeight: 60,
+            floating: true,
+            pinned: true,
+            backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+            flexibleSpace: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16), // κατεβάζω το header
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Smart Gallery',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                  Text(
+                    dateStr,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      color: Colors.white70,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
           SliverToBoxAdapter(child: _buildAlbumFilterMenu()),
           // if (_sortOptionsOpen) SliverToBoxAdapter(child: _buildSortMenu()),
           if (_filterMenuOpen && _showTagsMenu) SliverToBoxAdapter(child: _buildFilterMenu()),
@@ -64,40 +94,7 @@ class _AlbumsScreenState extends State<AlbumsScreen> {
                 ),
         ],
       ),
-    );
-  }
-
-  Widget _buildCustomHeader() {
-    final now = DateTime.now();
-    final dateStr = _formatDate(now);
-    return SliverAppBar(
-      expandedHeight: 60,
-      floating: false,
-      pinned: true,
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      flexibleSpace: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            const Text(
-              'Smart Gallery',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
-            ),
-            Text(
-              dateStr,
-              style: const TextStyle(
-                fontSize: 16,
-                color: Colors.white70,
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 
@@ -106,8 +103,6 @@ class _AlbumsScreenState extends State<AlbumsScreen> {
   // ...κρατάω μόνο μία έκδοση της _buildFilterMenu παρακάτω...
 
   // (Διορθώθηκε: δεν υπάρχει widget tree εκτός μεθόδου)
-    Widget _buildSortMenu() {
-    // (Removed lower 'Sort albums by:' section as requested)
   Widget _buildAlbumFilterMenu() {
     // Αρχικά μόνο το filter button
     if (!_filterMenuOpen) {
@@ -363,5 +358,5 @@ class _AlbumsScreenState extends State<AlbumsScreen> {
     final weekday = weekdays[date.weekday - 1];
     return '$weekday ${date.day}/${date.month}/${date.year}';
   }
-// αφαιρέθηκε το περιττό κλείσιμο '}'
+
 
