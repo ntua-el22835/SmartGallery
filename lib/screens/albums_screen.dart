@@ -47,7 +47,7 @@ class _AlbumsScreenState extends State<AlbumsScreen> {
             pinned: true,
             backgroundColor: Theme.of(context).scaffoldBackgroundColor,
             flexibleSpace: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+              padding: const EdgeInsets.only(left: 16, right: 16, top: 36, bottom: 8),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [

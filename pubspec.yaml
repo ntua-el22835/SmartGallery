@@ -107,6 +107,11 @@ flutter:
     - assets/icons/Hash.png
     - assets/icons/Shuffle.png
     - assets/icons/smart gallery logo.png
+    - assets/icons/arrow up Icon.png
+    - assets/icons/Edit Icon.png
+    - assets/icons/Share Icon.png
+    - assets/icons/Trash Icon.png
+    - assets/icons/Save Icon.png
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

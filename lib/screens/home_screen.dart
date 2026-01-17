@@ -5,6 +5,7 @@ import 'package:smartgallery/screens/search_screen.dart';
 import 'package:smartgallery/services/database_service.dart';
 import 'package:smartgallery/services/camera_service.dart';
 import 'package:smartgallery/theme/app_theme.dart';
+import 'package:smartgallery/screens/camera_screen.dart'; // <-- Missing import added
 
 
 /// Αρχική οθόνη - Home Screen (Gallery View)
@@ -13,8 +14,11 @@ import 'package:smartgallery/theme/app_theme.dart';
 /// - Custom header με date
 /// - Gallery grid με φωτογραφίες
 /// - Filter και sort options
+
+typedef EditTagsCallback = void Function();
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+  final EditTagsCallback? onEditTags;
+  const HomeScreen({super.key, this.onEditTags});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -61,41 +65,111 @@ class _HomeScreenState extends State<HomeScreen> {
       );
     }
 
-    return Scaffold(
-      body: CustomScrollView(
-        slivers: [
-          _buildCustomHeader(),
-          if (_filteredPhotos.isEmpty)
-            SliverFillRemaining(
-              child: Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.image_not_supported, size: 64, color: Colors.white30),
-                    const SizedBox(height: 16),
-                    const Text('No photos yet', style: TextStyle(color: Colors.white70)),
+    // ΝΕΟ: State για το custom floating menu
+    bool _fabMenuOpen = false;
+
+    return StatefulBuilder(
+      builder: (context, setFabState) => Scaffold(
+        body: Stack(
+          children: [
+            CustomScrollView(
+              slivers: [
+                _buildCustomHeader(),
+                if (_filteredPhotos.isEmpty)
+                  SliverFillRemaining(
+                    child: Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.image_not_supported, size: 64, color: Colors.white30),
+                          const SizedBox(height: 16),
+                          const Text('No photos yet', style: TextStyle(color: Colors.white70)),
+                        ],
+                      ),
+                    ),
+                  )
+                else
+                  SliverPadding(
+                    padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 16),
+                    sliver: SliverGrid(
+                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 3,
+                        crossAxisSpacing: 12,
+                        mainAxisSpacing: 12,
+                        childAspectRatio: 1,
+                      ),
+                      delegate: SliverChildBuilderDelegate(
+                        (context, index) => _buildPhotoThumbnail(_filteredPhotos[index]),
+                        childCount: _filteredPhotos.length,
+                      ),
+                    ),
+                  ),
+                SliverPadding(padding: const EdgeInsets.only(bottom: 100)),
+              ],
+            ),
+            // Floating menu δεξιά, στο ύψος του volume up button
+            Positioned(
+              right: 24,
+              top: MediaQuery.of(context).size.height * 0.13,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  if (_fabMenuOpen) ...[
+                    FloatingActionButton(
+                      heroTag: 'fab_collapse',
+                      mini: true,
+                      backgroundColor: Colors.white12,
+                      shape: const CircleBorder(),
+                      child: Image.asset('assets/icons/arrow up Icon.png', width: 24, height: 24, color: Colors.white),
+                      onPressed: () => setFabState(() => _fabMenuOpen = false),
+                    ),
+                    const SizedBox(height: 8),
+                    FloatingActionButton(
+                      heroTag: 'fab_edit',
+                      mini: true,
+                      backgroundColor: Colors.white12,
+                      shape: const CircleBorder(),
+                      child: Image.asset('assets/icons/Edit Icon.png', width: 24, height: 24, color: Colors.white),
+                      onPressed: () {
+                        if (widget.onEditTags != null) {
+                          widget.onEditTags!();
+                        }
+                      },
+                    ),
+                    const SizedBox(height: 8),
+                    FloatingActionButton(
+                      heroTag: 'fab_share',
+                      mini: true,
+                      backgroundColor: Colors.white12,
+                      shape: const CircleBorder(),
+                      child: Image.asset('assets/icons/Share Icon.png', width: 24, height: 24, color: Colors.white),
+                      onPressed: () {}, // TODO: share photo
+                    ),
+                    const SizedBox(height: 8),
+                    FloatingActionButton(
+                      heroTag: 'fab_delete',
+                      mini: true,
+                      backgroundColor: Colors.white12,
+                      shape: const CircleBorder(),
+                      child: Image.asset('assets/icons/Trash Icon.png', width: 24, height: 24, color: Colors.white),
+                      onPressed: () {}, // TODO: delete photo
+                    ),
+                    const SizedBox(height: 8),
+                  ] else ...[
+                    FloatingActionButton(
+                      heroTag: 'fab_expand',
+                      mini: true,
+                      backgroundColor: Colors.white12,
+                      shape: const CircleBorder(),
+                      child: const Icon(Icons.keyboard_arrow_down, color: Colors.white),
+                      onPressed: () => setFabState(() => _fabMenuOpen = true),
+                    ),
                   ],
-                ),
-              ),
-            )
-          else
-            SliverPadding(
-              padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 16),
-              sliver: SliverGrid(
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 3,
-                  crossAxisSpacing: 12,
-                  mainAxisSpacing: 12,
-                  childAspectRatio: 1,
-                ),
-                delegate: SliverChildBuilderDelegate(
-                  (context, index) => _buildPhotoThumbnail(_filteredPhotos[index]),
-                  childCount: _filteredPhotos.length,
-                ),
+                ],
               ),
             ),
-          SliverPadding(padding: const EdgeInsets.only(bottom: 100)),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -109,7 +183,7 @@ class _HomeScreenState extends State<HomeScreen> {
       pinned: true,
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       flexibleSpace: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        padding: const EdgeInsets.only(left: 16, right: 16, top: 36, bottom: 8),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [

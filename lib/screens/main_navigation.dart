@@ -16,14 +16,20 @@ class MainNavigation extends StatefulWidget {
   State<MainNavigation> createState() => _MainNavigationState();
 }
 
+
 class _MainNavigationState extends State<MainNavigation> {
   int _currentIndex = 0;
+  late final List<Widget> _screens;
 
-  final List<Widget> _screens = [
-    const CameraScreen(),
-    const HomeScreen(),
-    const AlbumsScreen(),
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _screens = [
+      CameraScreen(),
+      HomeScreen(onEditTags: () => setState(() => _currentIndex = 0)),
+      const AlbumsScreen(),
+    ];
+  }
 
   @override
   Widget build(BuildContext context) {
