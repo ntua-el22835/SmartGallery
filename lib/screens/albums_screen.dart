@@ -41,7 +41,7 @@ class _AlbumsScreenState extends State<AlbumsScreen> {
         slivers: [
           _buildCustomHeader(),
           SliverToBoxAdapter(child: _buildAlbumFilterMenu()),
-          if (_sortOptionsOpen) SliverToBoxAdapter(child: _buildSortMenu()),
+          // if (_sortOptionsOpen) SliverToBoxAdapter(child: _buildSortMenu()),
           if (_filterMenuOpen && _showTagsMenu) SliverToBoxAdapter(child: _buildFilterMenu()),
           if (_selectedTags.isNotEmpty) SliverToBoxAdapter(child: _buildTagsBar()),
           _isEmpty
@@ -107,51 +107,7 @@ class _AlbumsScreenState extends State<AlbumsScreen> {
 
   // (Διορθώθηκε: δεν υπάρχει widget tree εκτός μεθόδου)
     Widget _buildSortMenu() {
-      return Container(
-        color: Colors.black54,
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('Sort albums by:', style: TextStyle(color: Colors.white)),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              children: [
-                ChoiceChip(
-                  label: const Text('Date'),
-                  selected: _sortType == 'date',
-                  shape: const StadiumBorder(),
-                  onSelected: (val) {
-                    setState(() {
-                      _sortType = 'date';
-                      _sortOptionsOpen = false;
-                    });
-                  },
-                  selectedColor: Colors.white,
-                  backgroundColor: Colors.grey[800],
-                  labelStyle: TextStyle(color: _sortType == 'date' ? Colors.black : Colors.white),
-                ),
-                ChoiceChip(
-                  label: const Text('Name'),
-                  selected: _sortType == 'name',
-                  shape: const StadiumBorder(),
-                  onSelected: (val) {
-                    setState(() {
-                      _sortType = 'name';
-                      _sortOptionsOpen = false;
-                    });
-                  },
-                  selectedColor: Colors.white,
-                  backgroundColor: Colors.grey[800],
-                  labelStyle: TextStyle(color: _sortType == 'name' ? Colors.black : Colors.white),
-                ),
-              ],
-            ),
-          ],
-        ),
-      );
-    }
+    // (Removed lower 'Sort albums by:' section as requested)
   Widget _buildAlbumFilterMenu() {
     // Αρχικά μόνο το filter button
     if (!_filterMenuOpen) {
@@ -203,53 +159,55 @@ class _AlbumsScreenState extends State<AlbumsScreen> {
             // Sort by (up-down arrow)
             Row(
               mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
+                if (_sortOptionsOpen)
+                  Wrap(
+                    spacing: 8,
+                    children: [
+                      ChoiceChip(
+                        label: const Text('Date'),
+                        selected: _sortType == 'date',
+                        shape: const StadiumBorder(),
+                        onSelected: (val) {
+                          setState(() {
+                            _sortType = 'date';
+                            _sortOptionsOpen = false;
+                          });
+                        },
+                        selectedColor: Colors.white,
+                        backgroundColor: Colors.grey[800],
+                        labelStyle: TextStyle(color: _sortType == 'date' ? Colors.black : Colors.white),
+                      ),
+                      ChoiceChip(
+                        label: const Text('Name'),
+                        selected: _sortType == 'name',
+                        shape: const StadiumBorder(),
+                        onSelected: (val) {
+                          setState(() {
+                            _sortType = 'name';
+                            _sortOptionsOpen = false;
+                          });
+                        },
+                        selectedColor: Colors.white,
+                        backgroundColor: Colors.grey[800],
+                        labelStyle: TextStyle(color: _sortType == 'name' ? Colors.black : Colors.white),
+                      ),
+                    ],
+                  ),
+                const SizedBox(width: 8),
                 FloatingActionButton(
                   heroTag: 'sort',
                   mini: true,
                   backgroundColor: Colors.white12,
-                      shape: const CircleBorder(),
-                      child: Image.asset('assets/icons/sort by (up and down arrow).png', width: 24, height: 24, color: Colors.white),
+                  shape: const CircleBorder(),
+                  child: Image.asset('assets/icons/sort by (up and down arrow).png', width: 24, height: 24, color: Colors.white),
                   onPressed: () {
                     setState(() {
                       _sortOptionsOpen = !_sortOptionsOpen;
                     });
                   },
                 ),
-                if (_sortOptionsOpen) ...[
-                  const SizedBox(width: 8),
-                  Container(
-                    decoration: BoxDecoration(
-                      color: Colors.white24,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        GestureDetector(
-                          onTap: () {
-                            setState(() {
-                              _sortType = 'date';
-                              _sortOptionsOpen = false;
-                            });
-                          },
-                          child: Text('Date', style: TextStyle(color: _sortType == 'date' ? Colors.amber : Colors.white)),
-                        ),
-                        const SizedBox(width: 8),
-                        GestureDetector(
-                          onTap: () {
-                            setState(() {
-                              _sortType = 'name';
-                              _sortOptionsOpen = false;
-                            });
-                          },
-                          child: Text('Name', style: TextStyle(color: _sortType == 'name' ? Colors.amber : Colors.white)),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
               ],
             ),
             const SizedBox(height: 8),
