@@ -1,4 +1,4 @@
-}
+
 import 'package:flutter/material.dart';
 import 'package:smartgallery/models/photo.dart';
 import 'package:smartgallery/screens/photo_detail_screen.dart';
@@ -140,5 +140,7 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
+
+}
 
 
