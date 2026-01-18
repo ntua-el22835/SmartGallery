@@ -198,43 +198,13 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
                 const SizedBox(width: 8),
-                IconButton(
-                  icon: Icon(
-                    _isMenuExpanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
-                    color: Colors.white,
-                  ),
-                  onPressed: () {
-                    setState(() {
-                      _isMenuExpanded = !_isMenuExpanded;
-                    });
-                  },
-                ),
+                // Removed upper down-arrow toggler next to date (per request)
               ],
             ),
           ],
         ),
       ),
-      actions: [
-        if (_isMenuExpanded) ...[
-          IconButton(
-            icon: const Icon(Icons.filter_list, color: Colors.white),
-            onPressed: _showFilterMenu,
-          ),
-          IconButton(
-            icon: const Icon(Icons.sort, color: Colors.white),
-            onPressed: _showSortMenu,
-          ),
-          IconButton(
-            icon: const Icon(Icons.search, color: Colors.white),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const SearchScreen()),
-              );
-            },
-          ),
-        ],
-      ],
+      // Removed actions opened by the upper down-arrow (filter/sort/search)
     );
   }
 
