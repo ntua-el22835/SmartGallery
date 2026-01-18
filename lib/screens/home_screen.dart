@@ -188,18 +188,13 @@ class _HomeScreenState extends State<HomeScreen> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Image.asset('assets/icons/smart gallery logo.png', height: 28),
-            Row(
-              children: [
-                Text(
-                  dateStr,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    color: Colors.white70,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                // Removed upper down-arrow toggler next to date (per request)
-              ],
+            // Match Camera/Albums: show only the date at the right
+            Text(
+              dateStr,
+              style: const TextStyle(
+                fontSize: 16,
+                color: Colors.white70,
+              ),
             ),
           ],
         ),
