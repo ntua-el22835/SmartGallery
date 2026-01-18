@@ -3,7 +3,8 @@ import 'package:flutter/material.dart';
 /// Dummy Camera Screen (for navigation)
 class CameraScreen extends StatelessWidget {
   final bool showSaveButton;
-  const CameraScreen({super.key, this.showSaveButton = false});
+  // Show the save button by default (per request)
+  const CameraScreen({super.key, this.showSaveButton = true});
 
   @override
   Widget build(BuildContext context) {
