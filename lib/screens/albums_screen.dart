@@ -102,7 +102,7 @@ class _AlbumsScreenState extends State<AlbumsScreen> {
       return Align(
         alignment: Alignment.topRight,
         child: Padding(
-          padding: const EdgeInsets.only(top: 16, right: 16),
+          padding: const EdgeInsets.only(top: 10, right: 24),
           child: FloatingActionButton(
             heroTag: 'filter',
             mini: true,
@@ -123,7 +123,7 @@ class _AlbumsScreenState extends State<AlbumsScreen> {
     return Align(
       alignment: Alignment.topRight,
       child: Padding(
-        padding: const EdgeInsets.only(top: 16, right: 16),
+        padding: const EdgeInsets.only(top: 10, right: 24),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.end,

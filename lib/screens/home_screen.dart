@@ -110,7 +110,7 @@ class _HomeScreenState extends State<HomeScreen> {
             // Floating menu δεξιά, στο ύψος του volume up button
             Positioned(
               right: 24,
-              top: MediaQuery.of(context).size.height * 0.13,
+              top: 70,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
