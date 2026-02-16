@@ -46,14 +46,14 @@
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	<key>NSCameraUsageDescription</key>
-	<string>Smart Gallery needs access to your camera to take photos and organize them with AI-powered categorization.</string>
+	<string>Το Smart Gallery χρειάζεται πρόσβαση στην κάμερα για λήψη φωτογραφιών και οργάνωσή τους.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>Smart Gallery needs access to your photo library to organize and search your photos using machine learning.</string>
+	<string>Το Smart Gallery χρειάζεται πρόσβαση στη φωτοθήκη για οργάνωση και αναζήτηση φωτογραφιών.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
-	<string>Smart Gallery needs permission to save photos you take to your photo library.</string>
+	<string>Το Smart Gallery χρειάζεται άδεια για αποθήκευση φωτογραφιών στη φωτοθήκη.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>Smart Gallery needs your location to automatically tag photos with location data for better organization.</string>
+	<string>Το Smart Gallery χρειάζεται την τοποθεσία σας για αυτόματη ετικέτα φωτογραφιών.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-	<string>Smart Gallery needs your location to automatically tag photos with location data for better organization.</string>
+	<string>Το Smart Gallery χρειάζεται την τοποθεσία σας για αυτόματη ετικέτα φωτογραφιών.</string>
 </dict>
 </plist>

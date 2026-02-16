@@ -2,13 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:smartgallery/screens/home_screen.dart';
 import 'package:smartgallery/screens/albums_screen.dart';
 import 'package:smartgallery/screens/camera_screen.dart';
+import 'package:smartgallery/screens/discover_screen.dart';
+import 'package:smartgallery/screens/profile_screen.dart';
 
-/// Main Navigation Screen με Bottom Navigation Bar
+/// Κύριο navigation με Bottom Navigation Bar
 /// 
-/// Βασισμένο στα Figma designs:
-/// - Home (house icon)
-/// - Albums (picture frame icon)
-/// - Explore (grid icon)
+/// Τα tabs: Camera, Home, Discover, Albums, Profile
 class MainNavigation extends StatefulWidget {
   const MainNavigation({super.key});
 
@@ -18,26 +17,32 @@ class MainNavigation extends StatefulWidget {
 
 
 class _MainNavigationState extends State<MainNavigation> {
-  int _currentIndex = 0;
-  late final List<Widget> _screens;
+  int _currentIndex = 0; // Τρέχον tab
+  int _homeRefreshKey = 0; // Κλειδί ανανέωσης για HomeScreen όταν αποθηκεύεται φωτογραφία
 
-  @override
-  void initState() {
-    super.initState();
-    _screens = [
-      CameraScreen(),
-      HomeScreen(onEditTags: () => setState(() => _currentIndex = 0)),
-      const AlbumsScreen(),
-    ];
-  }
+  /// Λίστα οθονών για κάθε tab
+  List<Widget> get _screens => [
+    CameraScreen(onPhotoSaved: () {
+      setState(() {
+        _homeRefreshKey++;
+        _currentIndex = 1;
+      });
+    }),
+    HomeScreen(key: ValueKey(_homeRefreshKey), onEditTags: () => setState(() => _currentIndex = 0)),
+    const DiscoverScreen(),
+    const AlbumsScreen(),
+    const ProfileScreen(),
+  ];
 
   @override
   Widget build(BuildContext context) {
+    // Κύριο layout με IndexedStack για διατήρηση state των tabs
     return Scaffold(
       body: IndexedStack(
         index: _currentIndex,
         children: _screens,
       ),
+      // Κάτω γραμμή πλοήγησης με 5 tabs
       bottomNavigationBar: BottomNavigationBar(
         items: [
           BottomNavigationBarItem(
@@ -59,13 +64,21 @@ class _MainNavigationState extends State<MainNavigation> {
             label: 'Home',
           ),
           BottomNavigationBarItem(
+            icon: Icon(Icons.explore, color: _currentIndex == 2 ? Colors.white : Colors.white38, size: 28),
+            label: 'Discover',
+          ),
+          BottomNavigationBarItem(
             icon: Image.asset(
               'assets/icons/Image.png',
-              color: _currentIndex == 2 ? Colors.white : Colors.white38,
+              color: _currentIndex == 3 ? Colors.white : Colors.white38,
               width: 28,
               height: 28,
             ),
             label: 'Albums',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.person, color: _currentIndex == 4 ? Colors.white : Colors.white38, size: 28),
+            label: 'Profile',
           ),
         ],
         currentIndex: _currentIndex,

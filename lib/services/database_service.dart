@@ -8,19 +8,15 @@ import 'package:logging/logging.dart';
 import 'dart:io';
 import 'dart:convert'; // για jsonEncode/jsonDecode
 
-// Εισαγωγές για desktop platforms (platform-specific imports)
-import 'package:sqflite_common_ffi/sqflite_ffi.dart' if (dart.library.html) 'package:sqflite_common_ffi_stub/sqflite_ffi_stub.dart';
+// Εισαγωγές για database - sqflite_common_ffi λειτουργεί σε Android, iOS, Windows, Linux
+// Web: stub για αποφυγή σφαλμάτων μεταγλώττισης
+import 'package:sqflite_common_ffi/sqflite_ffi.dart'
+    if (dart.library.html) 'package:sqflite_common_ffi_stub/sqflite_ffi_stub.dart';
 
 /// Service για τη διαχείριση της βάσης δεδομένων SQLite
-/// 
-/// Παρόμοια δομή με το SQLService.dart από το todotoday example.
-/// Διαχειρίζεται:
-/// - Photos (φωτογραφίες)
-/// - Persons (αναγνωρισμένα πρόσωπα)
-/// - Locations (τοποθεσίες)
-/// - Users (χρήστες) 
-
-/// Κλάση DatabaseService
+///
+/// Περιέχει: CRUD για φωτογραφίες, πρόσωπα, τοποθεσίες, χρήστες.
+/// Χρησιμοποιεί sqflite (mobile) ή sqflite_common_ffi (desktop).
 class DatabaseService {
   final log = Logger('DatabaseServiceLogger');
   Database? _database;
@@ -29,7 +25,7 @@ class DatabaseService {
   /// Ανάκτηση instance της βάσης δεδομένων
   Future<Database> get database async {
     if (_database != null) {
-      log.config("get database called, return instance");
+      log.config("Κλήση get database, επιστροφή υπάρχοντος instance");
       return _database!;
     }
     _database = await initDB(); // Αρχικοποίηση της βάσης δεδομένων
@@ -42,7 +38,7 @@ class DatabaseService {
   /// Mobile (Android/iOS): Χρησιμοποιεί sqflite
   /// Desktop (Windows/Linux): Χρησιμοποιεί sqflite_common_ffi
   Future<Database> initDB() async {
-    log.config("initDB called, Platform: ${Platform.operatingSystem}");
+    log.config("Κλήση initDB, Πλατφόρμα: ${Platform.operatingSystem}");
     
     if (Platform.isWindows || Platform.isLinux) {
       // Desktop: Χρήση sqflite_common_ffi
@@ -75,7 +71,7 @@ class DatabaseService {
 
   /// Δημιουργία tables
   Future<void> _onCreate(Database db, int version) async {
-    log.config("_onCreate called, version: $version");
+    log.config("Κλήση _onCreate, έκδοση: $version");
     
     // Photos table
     await db.execute('''
@@ -93,7 +89,7 @@ class DatabaseService {
       )
     ''');
     
-    // Persons table
+    // Πίνακας προσώπων
     await db.execute('''
       CREATE TABLE persons (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -106,7 +102,7 @@ class DatabaseService {
       )
     ''');
     
-    // Locations table
+    // Πίνακας τοποθεσιών
     await db.execute('''
       CREATE TABLE locations (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -119,7 +115,7 @@ class DatabaseService {
       )
     ''');
     
-    // Users table
+    // Πίνακας χρηστών
     await db.execute('''
       CREATE TABLE users (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -133,7 +129,7 @@ class DatabaseService {
       )
     ''');
     
-    // Photo-Persons junction table (many-to-many / junction table για σχέσεις πολλά-προς-πολλά)
+    // Πίνακας σύνδεσης φωτογραφιών-προσώπων (πολλά-προς-πολλά)
     await db.execute('''
       CREATE TABLE photo_persons (
         photo_id INTEGER NOT NULL,
@@ -355,6 +351,123 @@ class DatabaseService {
     );
   }
 
+  /// Ανάκτηση albums (ομαδοποίηση φωτογραφιών ανά κατηγορία και tags)
+  Future<List<Map<String, dynamic>>> getAlbums() async {
+    final allPhotos = await getPhotos();
+    final Map<String, Map<String, dynamic>> albumsMap = {};
+
+    for (final photo in allPhotos) {
+      final catName = photo.category.toString().split('.').last;
+      final catKey = 'category_$catName';
+      if (!albumsMap.containsKey(catKey)) {
+        albumsMap[catKey] = {
+          'id': catKey,
+          'name': _getCategoryDisplayName(catName),
+          'count': 0,
+          'thumbnail': null,
+          'date': null,
+          'type': 'category',
+          'filter': catName,
+        };
+      }
+      albumsMap[catKey]!['count'] = (albumsMap[catKey]!['count'] as int) + 1;
+      if (albumsMap[catKey]!['thumbnail'] == null && photo.filePath.isNotEmpty) {
+        albumsMap[catKey]!['thumbnail'] = photo.filePath;
+      }
+      final d = photo.dateTaken;
+      albumsMap[catKey]!['date'] = '${d.year}-${d.month.toString().padLeft(2, '0')}';
+    }
+
+    for (final photo in allPhotos) {
+      for (final tag in photo.tags) {
+        if (tag.isEmpty) continue;
+        final tagKey = 'tag_$tag';
+        if (!albumsMap.containsKey(tagKey)) {
+          albumsMap[tagKey] = {
+            'id': tagKey,
+            'name': '#$tag',
+            'count': 0,
+            'thumbnail': null,
+            'date': null,
+            'type': 'tag',
+            'filter': tag,
+          };
+        }
+        albumsMap[tagKey]!['count'] = (albumsMap[tagKey]!['count'] as int) + 1;
+        if (albumsMap[tagKey]!['thumbnail'] == null && photo.filePath.isNotEmpty) {
+          albumsMap[tagKey]!['thumbnail'] = photo.filePath;
+        }
+      }
+    }
+
+    return albumsMap.values.toList();
+  }
+
+  /// Φόρτωση φωτογραφιών για album (κατηγορία ή tag)
+  Future<List<Photo>> getPhotosForAlbum(String albumId) async {
+    if (albumId.startsWith('category_')) {
+      final cat = albumId.replaceFirst('category_', '');
+      return getPhotos(category: _parseCategory(cat));
+    }
+    if (albumId.startsWith('tag_')) {
+      final tag = albumId.replaceFirst('tag_', '');
+      final all = await getPhotos();
+      return all.where((p) => p.tags.any((t) => t.toLowerCase() == tag.toLowerCase())).toList();
+    }
+    return getPhotos();
+  }
+
+  String _getCategoryDisplayName(String cat) {
+    switch (cat) {
+      case 'portrait': return 'Προσωπογραφίες';
+      case 'landscape': return 'Τοπία';
+      case 'group': return 'Ομαδικές';
+      default: return cat;
+    }
+  }
+
+  /// Ανάκτηση όλων των μοναδικών tags από τις φωτογραφίες
+  Future<List<String>> getAllTags() async {
+    final photos = await getPhotos();
+    final Set<String> tagSet = {};
+    for (final photo in photos) {
+      for (final tag in photo.tags) {
+        if (tag.trim().isNotEmpty) {
+          tagSet.add(tag.trim());
+        }
+      }
+    }
+    return tagSet.toList()..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+  }
+
+  /// Ανάκτηση ή δημιουργία προεπιλεγμένου χρήστη
+  Future<User> getOrCreateDefaultUser() async {
+    final db = await database;
+    final maps = await db.query('users', limit: 1);
+    if (maps.isNotEmpty) {
+      return User.fromMap(maps.first);
+    }
+    final defaultUser = User(
+      username: 'Χρήστης Smart Gallery',
+      email: null,
+      autoCategorizeEnabled: true,
+      categoryPreferences: {'portrait': true, 'landscape': true, 'group': true},
+    );
+    final userMap = defaultUser.toMap();
+    userMap.remove('id');
+    final id = await db.insert('users', userMap);
+    return User(
+      id: id,
+      username: defaultUser.username,
+      email: defaultUser.email,
+      profileImageUrl: defaultUser.profileImageUrl,
+      favoritePhotoIds: defaultUser.favoritePhotoIds,
+      recentPhotoIds: defaultUser.recentPhotoIds,
+      categoryPreferences: defaultUser.categoryPreferences,
+      autoCategorizeEnabled: defaultUser.autoCategorizeEnabled,
+    );
+  }
+
   /// Ανάκτηση φωτογραφιών ανά κατηγορία
   Future<Map<PhotoCategory, List<Photo>>> getPhotosByCategory() async {
     final allPhotos = await getPhotos();
@@ -531,6 +644,6 @@ class DatabaseService {
   /// Αρχικοποίηση της βάσης δεδομένων
   Future<void> initializeDatabase() async {
     await database; // Αυτό θα δημιουργήσει τη βάση αν δεν υπάρχει
-    log.config("Database initialized successfully");
+    log.config("Η βάση δεδομένων αρχικοποιήθηκε επιτυχώς");
   }
 }

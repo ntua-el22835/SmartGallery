@@ -1,35 +1,37 @@
 import 'package:flutter/material.dart';
 import 'package:logging/logging.dart';
 import 'package:smartgallery/screens/main_navigation.dart';
+import 'package:smartgallery/services/database_service.dart';
 import 'package:smartgallery/theme/app_theme.dart';
 
-/// Main entry point για την εφαρμογή Smart Gallery
+/// Κύριο σημείο εισόδου για την εφαρμογή Smart Gallery
 /// 
-/// Smart Gallery: A trip down the memory lane
-/// Κατηγορία: Photography
+/// Smart Gallery: Ένα ταξίδι στη μνήμη
+/// Κατηγορία: Φωτογραφία
 /// 
 /// Η εφαρμογή απλοποιεί την ταξινόμηση και αναζήτηση φωτογραφιών
 /// χρησιμοποιώντας ML για κατηγοριοποίηση και face recognition.
-final log = Logger('SmartGalleryLogger');
+final log = Logger('SmartGalleryLogger'); // Λογαριθμός για την εφαρμογή
 
-void main() {
-  // Avoid errors caused by flutter upgrade
+void main() async {
+  // Απαραίτητο για async initialization πριν το runApp
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Setup logging (όπως στο todotoday example)
-  Logger.root.level = Level.ALL; // defaults to Level.INFO
+  // Ρύθμιση logging για debugging
+  Logger.root.level = Level.ALL;
   Logger.root.onRecord.listen((record) {
-    print(
+    debugPrint(
         '${record.loggerName} --> ${record.level.name}: ${record.time}: ${record.message}');
   });
 
-  // TODO: Initialize database service
-  // final databaseService = DatabaseService();
-  // databaseService.initializeDatabase();
+  // Αρχικοποίηση της βάσης δεδομένων
+  final databaseService = DatabaseService(); 
+  await databaseService.initializeDatabase();
 
-  runApp(const MyApp());
+  runApp(const MyApp()); // Εκκίνηση της εφαρμογής
 }
 
+/// Κύριο widget της εφαρμογής
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 

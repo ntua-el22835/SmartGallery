@@ -1,31 +1,26 @@
 import 'package:flutter/material.dart';
 
-/// Theme configuration για Smart Gallery
-/// 
-/// Βασισμένο στα Figma designs:
-/// - Dark theme (black background)
-/// - Neumorphic UI elements
-/// - White text/icons
-import 'package:flutter/material.dart';
-
-
+/// Θέμα εφαρμογής Smart Gallery
+///
+/// Περιέχει χρώματα, typography και styles από το Figma design.
+/// Χρησιμοποιείται για dark theme με μαύρο background και λευκά στοιχεία.
 class AppTheme {
-  // Colors από Figma FinalUI Design
+  // Χρώματα από Figma FinalUI Design
   static const Color buttonText = Color(0xFFFFFFFF);
   static const Color buttonColor = Color(0xFFFFFFFF);
   static const Color glass3 = Color(0xFFFFFFFF);
   static const Color glass2 = Color(0xFFFFFFFF);
   static const Color glass1 = Color(0xFFFFFFFF);
-  static const Color backgroundColor = Color(0xFF000000); // Pure black
-  static const Color surfaceColor = Color(0xFF1A1A1A); // Dark surface
-  static const Color photoPlaceholderColor = Color(0xFFD9D9D9); // Light gray for photos
-  static const Color primaryColor = Color(0xFFFFFFFF); // White for primary actions
+  static const Color backgroundColor = Color(0xFF000000); // Μαύρο background
+  static const Color surfaceColor = Color(0xFF1A1A1A); // Σκούρο surface
+  static const Color photoPlaceholderColor = Color(0xFFD9D9D9); // Γκρι placeholder για φωτογραφίες
+  static const Color primaryColor = Color(0xFFFFFFFF); // Λευκό για κύριες ενέργειες
   static const Color textColor = Colors.white;
   static const Color iconColor = Colors.white;
-  static const Color glassColor = Color(0x0DFFFFFF); // Glass effect rgba(255,255,255,0.02)
+  static const Color glassColor = Color(0x0DFFFFFF); // Glass effect
   static const double globalHeight = 24.0;
 
-  // Example of glass effect as a BoxDecoration
+  // Παράδειγμα glass effect ως BoxDecoration
   static BoxDecoration glassEffect1 = BoxDecoration(
     color: glass1.withOpacity(0.2),
     backgroundBlendMode: BlendMode.overlay,
@@ -45,6 +40,7 @@ class AppTheme {
     ],
   );
 
+  /// Dark theme για την εφαρμογή
   static ThemeData get darkTheme {
     return ThemeData(
       useMaterial3: true,
@@ -53,10 +49,8 @@ class AppTheme {
       colorScheme: const ColorScheme.dark(
         primary: primaryColor,
         surface: surfaceColor,
-        background: backgroundColor,
         onPrimary: Colors.white,
         onSurface: Colors.white,
-        onBackground: Colors.white,
       ),
       appBarTheme: const AppBarTheme(
         backgroundColor: backgroundColor,
@@ -96,8 +90,9 @@ class AppTheme {
     );
   }
 
-  /// Helper για neumorphic shadow effect
+  /// Βοηθητική μέθοδος για neumorphic shadow effect
   static List<BoxShadow> getNeumorphicShadow(bool isPressed) {
+    // Αν το κουμπί είναι πατημένο
     if (isPressed) {
       return [
         BoxShadow(
@@ -108,6 +103,7 @@ class AppTheme {
         ),
       ];
     } else {
+      // Αν το κουμπί δεν είναι πατημένο
       return [
         BoxShadow(
           color: Colors.black.withOpacity(0.5),

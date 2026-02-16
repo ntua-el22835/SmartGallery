@@ -1,4 +1,4 @@
-import 'dart:convert'; // for jsonDecode
+import 'dart:convert'; // Για jsonEncode/jsonDecode
 
 /// Model class για τον χρήστη
 /// 
@@ -9,10 +9,10 @@ class User {
   final String username;
   final String? email;
   final String? profileImageUrl;
-  final List<int> favoritePhotoIds; // Favorite photos
-  final List<int> recentPhotoIds; // Recently viewed photos
-  final Map<String, bool> categoryPreferences; // Preferred categories to show
-  final bool autoCategorizeEnabled; // Auto-categorization enabled/disabled
+  final List<int> favoritePhotoIds; // Αγαπημένες φωτογραφίες
+  final List<int> recentPhotoIds; // Πρόσφατα προβεβλημένες φωτογραφίες
+  final Map<String, bool> categoryPreferences; // Προτιμώμενες κατηγορίες εμφάνισης
+  final bool autoCategorizeEnabled; // Αυτόματη κατηγοριοποίηση ενεργή/ανενεργή
 
   /// Constructor για το User object
   User({

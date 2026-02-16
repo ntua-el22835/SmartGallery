@@ -1,4 +1,4 @@
-import 'dart:convert'; // for jsonDecode
+import 'dart:convert'; // Για jsonEncode/jsonDecode
 
 /// Model class για αναγνωρισμένα πρόσωπα
 /// Χρησιμοποιείται για την αποθήκευση πληροφοριών

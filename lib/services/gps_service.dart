@@ -19,7 +19,7 @@ class GPSService {
       // Έλεγχος αν το location service είναι ενεργό
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) {
-        log.warning("Location services are disabled");
+        log.warning("Οι υπηρεσίες τοποθεσίας είναι απενεργοποιημένες");
         return null;
       }
 
@@ -35,7 +35,7 @@ class GPSService {
 
       // Έλεγχος αν οι permissions είναι απενεργοποιημένες για πάντα
       if (permission == LocationPermission.deniedForever) {
-        log.severe("Location permissions permanently denied");
+        log.severe("Τα δικαιώματα τοποθεσίας αρνήθηκαν μόνιμα");
         return null;
       }
 
@@ -71,7 +71,7 @@ class GPSService {
 
       // Έλεγχος αν υπάρχουν placemarks
       if (placemarks.isEmpty) {
-        log.warning("No placemarks found for coordinates");
+        log.warning("Δεν βρέθηκαν τοποθεσίες για τις συντεταγμένες");
         return null;
       }
 
@@ -100,7 +100,7 @@ class GPSService {
   Future<models.Location?> getPhotoLocation(String imagePath) async {
     try {
       // Έλεγχος αν η φωτογραφία έχει EXIF GPS data
-      log.warning("EXIF GPS reading not yet implemented");
+      log.warning("Η ανάγνωση EXIF GPS δεν έχει υλοποιηθεί ακόμα");
       return null;
     } catch (e) {
       log.severe("Σφάλμα ανάγνωσης EXIF GPS: $e"); // Επιστροφή null αν υπάρχει σφάλμα

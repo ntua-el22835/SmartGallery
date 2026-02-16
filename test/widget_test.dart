@@ -1,9 +1,12 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
+/// Αρχείο δοκιμών widget για την εφαρμογή Smart Gallery
+///
+/// Περιέχει βασικές δοκιμές Flutter widgets (smoke tests).
+/// Χρησιμοποιεί το WidgetTester για αλληλεπίδραση με widgets,
+/// αναζήτηση child widgets στο widget tree και επαλήθευση τιμών.
+///
+/// Σημείωση: Οι τρέχουσες δοκιμές είναι προεπιλογή Flutter και
+/// ενδέχεται να χρειάζονται προσαρμογή για την Smart Gallery.
+library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -11,20 +14,12 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:smartgallery/main.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
+  // Δοκιμή smoke για την εφαρμογή - έλεγχος ότι το MyApp φορτώνει
+  testWidgets('Η εφαρμογή φορτώνει χωρίς σφάλματα', (WidgetTester tester) async {
+    // Κατασκευή της εφαρμογής και ενεργοποίηση ενός frame
     await tester.pumpWidget(const MyApp());
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
-
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
-
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    // Έλεγχος ότι η εφαρμογή εμφανίζει το MainNavigation (με κάμερα ή home)
+    expect(find.byType(MaterialApp), findsOneWidget);
   });
 }

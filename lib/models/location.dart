@@ -7,10 +7,10 @@ class Location {
   final int? id;
   final double latitude;
   final double longitude;
-  final String? address; // Reverse geocoded address
+  final String? address; // Διεύθυνση από reverse geocoding
   final String? city;
   final String? country;
-  final String? placeName; // Custom name (e.g., "Home", "Vacation Spot")
+  final String? placeName; // Προσαρμοσμένο όνομα (π.χ. "Σπίτι", "Διακοπές")
 
   /// Constructor για το Location object
   Location({

@@ -1,19 +1,16 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:smartgallery/models/photo.dart';
 import 'package:smartgallery/screens/photo_detail_screen.dart';
 import 'package:smartgallery/screens/search_screen.dart';
 import 'package:smartgallery/services/database_service.dart';
-import 'package:smartgallery/services/camera_service.dart';
 import 'package:smartgallery/theme/app_theme.dart';
-import 'package:smartgallery/screens/camera_screen.dart'; // <-- Missing import added
 
-
-/// Αρχική οθόνη - Home Screen (Gallery View)
-/// 
-/// Βασισμένο στα Figma designs:
-/// - Custom header με date
-/// - Gallery grid με φωτογραφίες
-/// - Filter και sort options
+/// Αρχική οθόνη - Gallery με φωτογραφίες
+///
+/// Περιέχει: Grid φωτογραφιών, φίλτρα (ημερομηνία, τοποθεσία, άτομα),
+/// ταξινόμηση, αναζήτηση, floating menu για ενέργειες.
 
 typedef EditTagsCallback = void Function();
 class HomeScreen extends StatefulWidget {
@@ -28,10 +25,18 @@ class _HomeScreenState extends State<HomeScreen> {
   late List<Photo> _allPhotos = [];
   late List<Photo> _filteredPhotos = [];
   String? _selectedFilter;
-  bool _isMenuExpanded = false;
+  bool _fabMenuOpen = false;
+  final Set<int> _selectedPhotoIds = {};
   bool _isLoading = true;
   final _databaseService = DatabaseService();
-  final _cameraService = CameraService();
+  // Παράμετροι φίλτρου και ταξινόμησης
+  PhotoCategory? _selectedCategory;
+  int? _locationId;
+  int? _personId;
+  DateTime? _startDate;
+  DateTime? _endDate;
+  bool _favoritesOnly = false;
+  String _sortBy = 'Νεότερα πρώτα';
 
   @override
   void initState() {
@@ -39,9 +44,19 @@ class _HomeScreenState extends State<HomeScreen> {
     _loadPhotos();
   }
 
+  /// Φόρτωση φωτογραφιών από τη βάση με εφαρμογή φίλτρων
   Future<void> _loadPhotos() async {
     try {
-      final photos = await _databaseService.getPhotos();
+      var photos = await _databaseService.getPhotos(
+        category: _selectedCategory,
+        locationId: _locationId,
+        personId: _personId,
+        startDate: _startDate,
+        endDate: _endDate,
+        favoritesOnly: _favoritesOnly,
+      );
+      // Εφαρμογή ταξινόμησης
+      photos = _applySort(photos);
       setState(() {
         _allPhotos = photos;
         _filteredPhotos = photos;
@@ -50,11 +65,30 @@ class _HomeScreenState extends State<HomeScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error loading photos: $e')),
+          SnackBar(content: Text('Σφάλμα φόρτωσης: $e')),
         );
       }
       setState(() => _isLoading = false);
     }
+  }
+
+  /// Ταξινόμηση λίστας φωτογραφιών
+  List<Photo> _applySort(List<Photo> photos) {
+    final sorted = List<Photo>.from(photos);
+    switch (_sortBy) {
+      case 'Παλαιότερα πρώτα':
+        sorted.sort((a, b) => a.dateTaken.compareTo(b.dateTaken));
+        break;
+      case 'Όνομα (Α-Ω)':
+        sorted.sort((a, b) => a.filePath.split('/').last.compareTo(b.filePath.split('/').last));
+        break;
+      case 'Όνομα (Ω-Α)':
+        sorted.sort((a, b) => b.filePath.split('/').last.compareTo(a.filePath.split('/').last));
+        break;
+      default: // Νεότερα πρώτα
+        sorted.sort((a, b) => b.dateTaken.compareTo(a.dateTaken));
+    }
+    return sorted;
   }
 
   @override
@@ -65,11 +99,7 @@ class _HomeScreenState extends State<HomeScreen> {
       );
     }
 
-    // ΝΕΟ: State για το custom floating menu
-    bool _fabMenuOpen = false;
-
-    return StatefulBuilder(
-      builder: (context, setFabState) => Scaffold(
+    return Scaffold(
         body: Stack(
           children: [
             CustomScrollView(
@@ -83,7 +113,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         children: [
                           Icon(Icons.image_not_supported, size: 64, color: Colors.white30),
                           const SizedBox(height: 16),
-                          const Text('No photos yet', style: TextStyle(color: Colors.white70)),
+                          const Text('Δεν υπάρχουν ακόμα φωτογραφίες', style: TextStyle(color: Colors.white70)),
                         ],
                       ),
                     ),
@@ -99,7 +129,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         childAspectRatio: 1,
                       ),
                       delegate: SliverChildBuilderDelegate(
-                        (context, index) => _buildPhotoThumbnail(_filteredPhotos[index]),
+                        (context, index) => _buildPhotoThumbnail(_filteredPhotos[index], _fabMenuOpen),
                         childCount: _filteredPhotos.length,
                       ),
                     ),
@@ -107,7 +137,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 SliverPadding(padding: const EdgeInsets.only(bottom: 100)),
               ],
             ),
-            // Floating menu δεξιά, στο ύψος του volume up button
+            // Προσαρμοσμένο floating menu δεξιά
             Positioned(
               right: 24,
               top: 70,
@@ -121,7 +151,10 @@ class _HomeScreenState extends State<HomeScreen> {
                       backgroundColor: Colors.white12,
                       shape: const CircleBorder(),
                       child: Image.asset('assets/icons/arrow up Icon.png', width: 24, height: 24, color: Colors.white),
-                      onPressed: () => setFabState(() => _fabMenuOpen = false),
+                      onPressed: () => setState(() {
+                        _fabMenuOpen = false;
+                        _selectedPhotoIds.clear();
+                      }),
                     ),
                     const SizedBox(height: 8),
                     FloatingActionButton(
@@ -130,11 +163,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       backgroundColor: Colors.white12,
                       shape: const CircleBorder(),
                       child: Image.asset('assets/icons/Edit Icon.png', width: 24, height: 24, color: Colors.white),
-                      onPressed: () {
-                        if (widget.onEditTags != null) {
-                          widget.onEditTags!();
-                        }
-                      },
+                      onPressed: () => _onEditSelected(),
                     ),
                     const SizedBox(height: 8),
                     FloatingActionButton(
@@ -143,7 +172,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       backgroundColor: Colors.white12,
                       shape: const CircleBorder(),
                       child: Image.asset('assets/icons/Share Icon.png', width: 24, height: 24, color: Colors.white),
-                      onPressed: () {}, // TODO: share photo
+                      onPressed: () => _onShareSelected(),
                     ),
                     const SizedBox(height: 8),
                     FloatingActionButton(
@@ -152,7 +181,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       backgroundColor: Colors.white12,
                       shape: const CircleBorder(),
                       child: Image.asset('assets/icons/Trash Icon.png', width: 24, height: 24, color: Colors.white),
-                      onPressed: () {}, // TODO: delete photo
+                      onPressed: () => _onDeleteSelected(),
                     ),
                     const SizedBox(height: 8),
                   ] else ...[
@@ -162,7 +191,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       backgroundColor: Colors.white12,
                       shape: const CircleBorder(),
                       child: const Icon(Icons.keyboard_arrow_down, color: Colors.white),
-                      onPressed: () => setFabState(() => _fabMenuOpen = true),
+                      onPressed: () => setState(() => _fabMenuOpen = true),
                     ),
                   ],
                 ],
@@ -170,8 +199,73 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ],
         ),
+    );
+  }
+
+  void _onEditSelected() async {
+    if (_selectedPhotoIds.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Επιλέξτε φωτογραφία για επεξεργασία ετικετών')));
+      return;
+    }
+    final photo = _filteredPhotos.firstWhere((p) => p.id != null && _selectedPhotoIds.contains(p.id));
+    await Navigator.push(context, MaterialPageRoute(builder: (c) => PhotoDetailScreen(photo: photo)));
+    setState(() {
+      _fabMenuOpen = false;
+      _selectedPhotoIds.clear();
+    });
+    _loadPhotos();
+  }
+
+  void _onShareSelected() async {
+    if (_selectedPhotoIds.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Επιλέξτε φωτογραφίες για κοινοποίηση')));
+      return;
+    }
+    final toShare = _filteredPhotos.where((p) => p.id != null && _selectedPhotoIds.contains(p.id)).toList();
+    final files = toShare.map((p) => XFile(p.filePath)).where((x) => File(x.path).existsSync()).toList();
+    if (files.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Τα αρχεία δεν βρέθηκαν')));
+      return;
+    }
+    await Share.shareXFiles(files);
+    setState(() {
+      _fabMenuOpen = false;
+      _selectedPhotoIds.clear();
+    });
+  }
+
+  void _onDeleteSelected() async {
+    if (_selectedPhotoIds.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Επιλέξτε φωτογραφίες για διαγραφή')));
+      return;
+    }
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (c) => AlertDialog(
+        title: const Text('Διαγραφή φωτογραφιών'),
+        content: Text('Διαγραφή ${_selectedPhotoIds.length} φωτογραφιών;'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('Ακύρωση')),
+          TextButton(
+            onPressed: () => Navigator.pop(c, true),
+            child: const Text('Διαγραφή', style: TextStyle(color: Colors.red)),
+          ),
+        ],
       ),
     );
+    if (confirmed != true || !mounted) return;
+    final toDelete = _filteredPhotos.where((p) => p.id != null && _selectedPhotoIds.contains(p.id)).toList();
+    for (final photo in toDelete) {
+      await _databaseService.deletePhoto(photo.id!);
+      final file = File(photo.filePath);
+      if (file.existsSync()) file.deleteSync();
+    }
+    setState(() {
+      _fabMenuOpen = false;
+      _selectedPhotoIds.clear();
+    });
+    _loadPhotos();
+    if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Οι φωτογραφίες διαγράφηκαν')));
   }
 
   Widget _buildCustomHeader() {
@@ -188,56 +282,95 @@ class _HomeScreenState extends State<HomeScreen> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Image.asset('assets/icons/smart gallery logo.png', height: 28),
-            // Match Camera/Albums: show only the date at the right
-            Text(
-              dateStr,
-              style: const TextStyle(
-                fontSize: 16,
-                color: Colors.white70,
-              ),
+            Row(
+              children: [
+                IconButton(icon: const Icon(Icons.search, color: Colors.white70), onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => SearchScreen()))),
+                IconButton(icon: const Icon(Icons.filter_list, color: Colors.white70), onPressed: _showFilterMenu),
+                IconButton(icon: const Icon(Icons.sort, color: Colors.white70), onPressed: _showSortMenu),
+                Text(dateStr, style: const TextStyle(fontSize: 16, color: Colors.white70)),
+              ],
             ),
           ],
         ),
       ),
-      // Removed actions opened by the upper down-arrow (filter/sort/search)
     );
   }
 
-  Widget _buildPhotoThumbnail(Photo photo) {
+  /// Μικρογραφία φωτογραφίας - σε λειτουργία επιλογής: tap για toggle, μπλε τικ κάτω δεξιά
+  Widget _buildPhotoThumbnail(Photo photo, bool isSelectionMode) {
+    final isSelected = photo.id != null && _selectedPhotoIds.contains(photo.id);
     return GestureDetector(
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => PhotoDetailScreen(photo: photo),
-          ),
-        );
+      onTap: () async {
+        if (isSelectionMode) {
+          if (photo.id != null) {
+            setState(() {
+              if (isSelected) {
+                _selectedPhotoIds.remove(photo.id);
+              } else {
+                _selectedPhotoIds.add(photo.id!);
+              }
+            });
+          }
+        } else {
+          await Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => PhotoDetailScreen(photo: photo),
+            ),
+          );
+          _loadPhotos();
+        }
       },
-      child: Container(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(22),
-          color: AppTheme.photoPlaceholderColor,
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(22),
-          child: (photo.filePath.isNotEmpty)
-              ? Image.asset(
-                  photo.filePath,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) => const Icon(Icons.image, color: Colors.white30),
-                )
-              : Container(
-                  color: AppTheme.photoPlaceholderColor,
-                  child: const Icon(Icons.image, color: Colors.white30),
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(22),
+              color: AppTheme.photoPlaceholderColor,
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(22),
+              child: _buildPhotoImage(photo.filePath.isNotEmpty ? photo.filePath : null, photo.thumbnailPath, BoxFit.cover),
+            ),
+          ),
+          if (isSelected)
+            Positioned(
+              bottom: 6,
+              right: 6,
+              child: Container(
+                padding: const EdgeInsets.all(4),
+                decoration: const BoxDecoration(
+                  color: Colors.blue,
+                  shape: BoxShape.circle,
                 ),
-        ),
+                child: const Icon(Icons.check, color: Colors.white, size: 18),
+              ),
+            ),
+        ],
       ),
     );
   }
 
+  /// Εμφάνιση εικόνας - asset path ή file path
+  Widget _buildPhotoImage(String? filePath, String? thumbnailPath, BoxFit fit) {
+    final path = thumbnailPath ?? filePath;
+    if (path == null || path.isEmpty) {
+      return Container(color: AppTheme.photoPlaceholderColor, child: const Icon(Icons.image, color: Colors.white30));
+    }
+    if (path.startsWith('assets/')) {
+      return Image.asset(path, fit: fit, errorBuilder: (_, __, ___) => const Icon(Icons.image, color: Colors.white30));
+    }
+    final file = File(path);
+    if (!file.existsSync()) {
+      return const Icon(Icons.image, color: Colors.white30);
+    }
+    return Image.file(file, fit: fit, errorBuilder: (_, __, ___) => const Icon(Icons.image, color: Colors.white30));
+  }
 
+
+  /// Μενού φίλτρου - ημερομηνία, τοποθεσία, άτομα, αγαπημένα
   void _showFilterMenu() {
-    // TODO: Implement filter menu
     showModalBottomSheet(
       context: context,
       backgroundColor: Theme.of(context).colorScheme.surface,
@@ -249,10 +382,48 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            _buildFilterOption('Date', Icons.calendar_today, _selectedFilter == 'Date'),
-            _buildFilterOption('Location', Icons.location_on, _selectedFilter == 'Location'),
-            _buildFilterOption('People', Icons.person, _selectedFilter == 'People'),
-            _buildFilterOption('Favorites', Icons.star, _selectedFilter == 'Favorites'),
+            ListTile(
+              leading: Icon(Icons.calendar_today, color: _selectedFilter == 'Date' ? Theme.of(context).colorScheme.primary : Colors.white),
+              title: Text('Ημερομηνία', style: TextStyle(color: _selectedFilter == 'Date' ? Theme.of(context).colorScheme.primary : Colors.white)),
+              onTap: () async {
+                Navigator.pop(context);
+                final dates = await showDateRangePicker(
+                  context: context,
+                  firstDate: DateTime(2000),
+                  lastDate: DateTime.now(),
+                  initialDateRange: DateTimeRange(start: _startDate ?? DateTime.now().subtract(const Duration(days: 30)), end: _endDate ?? DateTime.now()),
+                );
+                if (dates != null) {
+                  setState(() {
+                    _selectedFilter = 'Date';
+                    _startDate = dates.start;
+                    _endDate = dates.end;
+                  });
+                  _loadPhotos();
+                }
+              },
+            ),
+            _buildFilterOption('Τοποθεσία', Icons.location_on, _selectedFilter == 'Location', () => _selectedFilter = 'Location'),
+            _buildFilterOption('Άτομα', Icons.person, _selectedFilter == 'People', () => _selectedFilter = 'People'),
+            _buildFilterOption('Αγαπημένα', Icons.star, _favoritesOnly, () {
+              _favoritesOnly = !_favoritesOnly;
+              _selectedFilter = _favoritesOnly ? 'Favorites' : null;
+            }),
+            ListTile(
+              title: const Text('Καθαρισμός φίλτρων', style: TextStyle(color: Colors.white70)),
+              leading: const Icon(Icons.clear, color: Colors.white70),
+              onTap: () {
+                _selectedFilter = null;
+                _selectedCategory = null;
+                _locationId = null;
+                _personId = null;
+                _startDate = null;
+                _endDate = null;
+                _favoritesOnly = false;
+                Navigator.pop(context);
+                _loadPhotos();
+              },
+            ),
           ],
         ),
       ),
@@ -271,26 +442,24 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            _buildSortOption('Newest First', false),
-            _buildSortOption('Oldest First', false),
-            _buildSortOption('Name (A-Z)', false),
-            _buildSortOption('Name (Z-A)', false),
+            _buildSortOption('Νεότερα πρώτα', _sortBy == 'Νεότερα πρώτα'),
+            _buildSortOption('Παλαιότερα πρώτα', _sortBy == 'Παλαιότερα πρώτα'),
+            _buildSortOption('Όνομα (Α-Ω)', _sortBy == 'Όνομα (Α-Ω)'),
+            _buildSortOption('Όνομα (Ω-Α)', _sortBy == 'Όνομα (Ω-Α)'),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildFilterOption(String label, IconData icon, bool isSelected) {
+  Widget _buildFilterOption(String label, IconData icon, bool isSelected, VoidCallback onTap) {
     return ListTile(
       leading: Icon(icon, color: isSelected ? Theme.of(context).colorScheme.primary : Colors.white),
       title: Text(label, style: TextStyle(color: isSelected ? Theme.of(context).colorScheme.primary : Colors.white)),
       onTap: () {
-        setState(() {
-          _selectedFilter = isSelected ? null : label;
-        });
+        setState(() => onTap());
         Navigator.pop(context);
-        // TODO: Apply filter
+        _loadPhotos();
       },
     );
   }
@@ -305,14 +474,15 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       ),
       onTap: () {
+        setState(() => _sortBy = label);
         Navigator.pop(context);
-        // TODO: Apply sort
+        _loadPhotos();
       },
     );
   }
 
   String _formatDate(DateTime date) {
-    final weekdays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+    final weekdays = ['Δευτέρα', 'Τρίτη', 'Τετάρτη', 'Πέμπτη', 'Παρασκευή', 'Σάββατο', 'Κυριακή'];
     final weekday = weekdays[date.weekday - 1];
     return '$weekday ${date.day}/${date.month}/${date.year}';
   }

@@ -1,14 +1,16 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:smartgallery/models/photo.dart';
 import 'package:smartgallery/models/person.dart';
 import 'package:smartgallery/models/location.dart';
+import 'package:smartgallery/screens/photo_detail_screen.dart';
+import 'package:smartgallery/services/database_service.dart';
+import 'package:smartgallery/theme/app_theme.dart';
 
 /// Οθόνη αναζήτησης φωτογραφιών
-/// 
-/// Βασισμένο στα Figma designs:
-/// - Custom header με date
-/// - Overlay filter menu
-/// - Search results grid
+///
+/// Περιέχει: Αναζήτηση κατά filename και tags, φίλτρα (ημερομηνία,
+/// τοποθεσία, άτομα, αγαπημένα), grid αποτελεσμάτων.
 class SearchScreen extends StatefulWidget {
   const SearchScreen({super.key});
 
@@ -19,8 +21,9 @@ class SearchScreen extends StatefulWidget {
 class _SearchScreenState extends State<SearchScreen> {
   final TextEditingController _searchController = TextEditingController();
   final List<Photo> _searchResults = [];
+  final _databaseService = DatabaseService();
   
-  // Filter states
+  // Κατάσταση φίλτρων
   PhotoCategory? _selectedCategory;
   Person? _selectedPerson;
   Location? _selectedLocation;
@@ -28,6 +31,12 @@ class _SearchScreenState extends State<SearchScreen> {
   DateTime? _endDate;
   bool _favoritesOnly = false;
   bool _showFilterMenu = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _performSearch(); // Αρχική φόρτωση όλων των φωτογραφιών
+  }
 
   @override
   void dispose() {
@@ -43,7 +52,12 @@ class _SearchScreenState extends State<SearchScreen> {
           CustomScrollView(
             slivers: [
               _buildCustomHeader(),
-              SliverPadding(
+              if (_searchResults.isEmpty)
+                SliverFillRemaining(
+                  child: Center(child: Text('Δεν βρέθηκαν αποτελέσματα', style: TextStyle(color: Colors.white70))),
+                )
+              else
+                SliverPadding(
                 padding: const EdgeInsets.all(8),
                 sliver: SliverGrid(
                   gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
@@ -53,23 +67,19 @@ class _SearchScreenState extends State<SearchScreen> {
                   ),
                   delegate: SliverChildBuilderDelegate(
                     (context, index) {
-                      if (index >= _searchResults.length) {
-                        return Container(
-                          color: Colors.grey[800],
-                          child: const Center(
-                            child: Icon(Icons.image, color: Colors.white30),
-                          ),
-                        );
+                      if (_searchResults.isEmpty) {
+                        return const Center(child: Text('Δεν βρέθηκαν αποτελέσματα', style: TextStyle(color: Colors.white70)));
                       }
+                      if (index >= _searchResults.length) return const SizedBox.shrink();
                       return _buildPhotoThumbnail(_searchResults[index]);
                     },
-                    childCount: _searchResults.isEmpty ? 12 : _searchResults.length,
+                    childCount: _searchResults.length,
                   ),
                 ),
               ),
             ],
           ),
-          // Filter overlay menu
+          // Επικάλυψη μενού φίλτρων
           if (_showFilterMenu) _buildFilterOverlay(),
         ],
       ),
@@ -80,46 +90,39 @@ class _SearchScreenState extends State<SearchScreen> {
     final now = DateTime.now();
     final dateStr = _formatDate(now);
     
-    return SliverAppBar(
-      expandedHeight: 60,
-      floating: true,
-      pinned: true,
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      flexibleSpace: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            const Text(
-              'Smart Gallery',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
-            ),
-            Row(
+    return SliverToBoxAdapter(
+      child: Column(
+        children: [
+          // Κεφαλίδα με γραμμή αναζήτησης
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  dateStr,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    color: Colors.white70,
+                Expanded(
+                  child: TextField(
+                    controller: _searchController,
+                    decoration: InputDecoration(
+                      hintText: 'Αναζήτηση...',
+                      prefixIcon: const Icon(Icons.search, color: Colors.white70),
+                      filled: true,
+                      fillColor: Colors.white12,
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                    ),
+                    style: const TextStyle(color: Colors.white),
+                    onSubmitted: (_) => _performSearch(),
                   ),
                 ),
-                const SizedBox(width: 16),
+                IconButton(icon: const Icon(Icons.search, color: Colors.white70), onPressed: _performSearch),
+                Text(dateStr, style: const TextStyle(fontSize: 14, color: Colors.white70)),
                 IconButton(
-                  icon: const Icon(Icons.filter_list, color: Colors.white),
-                  onPressed: () {
-                    setState(() {
-                      _showFilterMenu = !_showFilterMenu;
-                    });
-                  },
+                  icon: const Icon(Icons.filter_list, color: Colors.white70),
+                  onPressed: () => setState(() => _showFilterMenu = !_showFilterMenu),
                 ),
               ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -190,22 +193,23 @@ class _SearchScreenState extends State<SearchScreen> {
 
   Widget _buildPhotoThumbnail(Photo photo) {
     return GestureDetector(
-      onTap: () {
-        // TODO: Navigate to photo detail
-      },
+      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => PhotoDetailScreen(photo: photo))),
       child: Container(
-        color: Colors.grey[800],
-        child: photo.thumbnailPath != null
-            ? Image.asset(
-                photo.thumbnailPath!,
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) {
-                  return const Icon(Icons.image, color: Colors.white30);
-                },
-              )
-            : const Icon(Icons.image, color: Colors.white30),
+        color: AppTheme.photoPlaceholderColor,
+        child: _buildPhotoImage(photo.filePath, photo.thumbnailPath),
       ),
     );
+  }
+
+  Widget _buildPhotoImage(String filePath, String? thumbnailPath) {
+    final path = thumbnailPath ?? filePath;
+    if (path.isEmpty) return const Icon(Icons.image, color: Colors.white30);
+    if (path.startsWith('assets/')) {
+      return Image.asset(path, fit: BoxFit.cover, errorBuilder: (_, __, ___) => const Icon(Icons.image, color: Colors.white30));
+    }
+    final file = File(path);
+    if (!file.existsSync()) return const Icon(Icons.image, color: Colors.white30);
+    return Image.file(file, fit: BoxFit.cover, errorBuilder: (_, __, ___) => const Icon(Icons.image, color: Colors.white30));
   }
 
   void _showDatePicker() {
@@ -224,27 +228,163 @@ class _SearchScreenState extends State<SearchScreen> {
     });
   }
 
-  void _showLocationPicker() {
-    // TODO: Show location picker dialog
-    _performSearch();
+  void _showLocationPicker() async {
+    final locations = await _databaseService.getAllLocations();
+    if (!mounted) return;
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Text('Επιλογή τοποθεσίας', style: Theme.of(context).textTheme.titleLarge),
+            ),
+            ListTile(
+              leading: const Icon(Icons.clear, color: Colors.white70),
+              title: const Text('Καθαρισμός φίλτρου', style: TextStyle(color: Colors.white70)),
+              onTap: () {
+                setState(() {
+                  _selectedLocation = null;
+                  _showFilterMenu = false;
+                });
+                Navigator.pop(context);
+                _performSearch();
+              },
+            ),
+            if (locations.isEmpty)
+              const Padding(
+                padding: EdgeInsets.all(16),
+                child: Text('Δεν υπάρχουν τοποθεσίες', style: TextStyle(color: Colors.white70)),
+              )
+            else
+              Flexible(
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: locations.length,
+                  itemBuilder: (context, i) {
+                    final loc = locations[i];
+                    final label = loc.placeName ?? loc.city ?? loc.country ?? '${loc.latitude.toStringAsFixed(2)}, ${loc.longitude.toStringAsFixed(2)}';
+                    return ListTile(
+                      leading: const Icon(Icons.location_on, color: Colors.white70),
+                      title: Text(label, style: const TextStyle(color: Colors.white)),
+                      onTap: () {
+                        setState(() {
+                          _selectedLocation = loc;
+                          _showFilterMenu = false;
+                        });
+                        Navigator.pop(context);
+                        _performSearch();
+                      },
+                    );
+                  },
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
   }
 
-  void _showPeoplePicker() {
-    // TODO: Show people picker dialog
-    _performSearch();
+  void _showPeoplePicker() async {
+    final persons = await _databaseService.getAllPersons();
+    if (!mounted) return;
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Text('Επιλογή προσώπου', style: Theme.of(context).textTheme.titleLarge),
+            ),
+            ListTile(
+              leading: const Icon(Icons.clear, color: Colors.white70),
+              title: const Text('Καθαρισμός φίλτρου', style: TextStyle(color: Colors.white70)),
+              onTap: () {
+                setState(() {
+                  _selectedPerson = null;
+                  _showFilterMenu = false;
+                });
+                Navigator.pop(context);
+                _performSearch();
+              },
+            ),
+            if (persons.isEmpty)
+              const Padding(
+                padding: EdgeInsets.all(16),
+                child: Text('Δεν υπάρχουν αναγνωρισμένα πρόσωπα', style: TextStyle(color: Colors.white70)),
+              )
+            else
+              Flexible(
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: persons.length,
+                  itemBuilder: (context, i) {
+                    final person = persons[i];
+                    return ListTile(
+                      leading: const Icon(Icons.person, color: Colors.white70),
+                      title: Text(person.name, style: const TextStyle(color: Colors.white)),
+                      onTap: () {
+                        setState(() {
+                          _selectedPerson = person;
+                          _showFilterMenu = false;
+                        });
+                        Navigator.pop(context);
+                        _performSearch();
+                      },
+                    );
+                  },
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
   }
 
+  /// Αναζήτηση φωτογραφιών στη βάση με φίλτρα
   Future<void> _performSearch() async {
-    // TODO: Search photos from database
-    // TODO: Apply filters (category, person, location, date range, favorites)
-    // TODO: Update _searchResults
-    setState(() {
-      // _searchResults = results;
-    });
+    try {
+      final photos = await _databaseService.getPhotos(
+        category: _selectedCategory,
+        locationId: _selectedLocation?.id,
+        personId: _selectedPerson?.id,
+        startDate: _startDate,
+        endDate: _endDate,
+        favoritesOnly: _favoritesOnly,
+      );
+      // Φιλτράρισμα κατά κείμενο αναζήτησης (filename, tags)
+      var results = photos;
+      final query = _searchController.text.trim().toLowerCase();
+      if (query.isNotEmpty) {
+        results = photos.where((p) {
+          final pathMatch = p.filePath.toLowerCase().contains(query);
+          final tagMatch = p.tags.any((t) => t.toLowerCase().contains(query));
+          return pathMatch || tagMatch;
+        }).toList();
+      }
+      setState(() {
+        _searchResults.clear();
+        _searchResults.addAll(results);
+      });
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Σφάλμα: $e')));
+    }
   }
 
   String _formatDate(DateTime date) {
-    final weekdays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+    final weekdays = ['Δευτέρα', 'Τρίτη', 'Τετάρτη', 'Πέμπτη', 'Παρασκευή', 'Σάββατο', 'Κυριακή'];
     final weekday = weekdays[date.weekday - 1];
     return '$weekday ${date.day}/${date.month}/${date.year}';
   }

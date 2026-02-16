@@ -1,12 +1,8 @@
-import 'package:smartgallery/models/photo.dart'; // Model για Photo objects
-import 'package:smartgallery/models/person.dart'; // Model για Person objects
-import 'package:logging/logging.dart'; // Logging για debugging
-import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart'; // Google ML Kit Face Detection - αναγνώριση προσώπων
-import 'package:google_mlkit_commons/google_mlkit_commons.dart'; // Google ML Kit Commons - InputImage για ML processing
-import 'package:flutter/material.dart'; // Flutter UI - Size class
-import 'dart:io'; 
-// Platform detection - για desktop fallback
-import 'dart:async'; // Async utilities (Future, async, await)
+import 'package:smartgallery/models/photo.dart';
+import 'package:smartgallery/models/person.dart';
+import 'package:logging/logging.dart';
+import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
+import 'dart:io';
 
 /// Service για Machine Learning λειτουργικότητα
 /// 
@@ -17,7 +13,7 @@ import 'dart:async'; // Async utilities (Future, async, await)
 class MLService {
   final log = Logger('MLServiceLogger');
   
-  // Face detector instance
+  // Στιγμιότυπο ανιχνευτή προσώπων (Face Detector)
   final FaceDetector _faceDetector = FaceDetector(
     options: FaceDetectorOptions(
       enableContours: false,
@@ -29,63 +25,45 @@ class MLService {
   );
   
 
-  /// Κατηγοριοποίηση φωτογραφίας
+  /// Κατηγοριοποίηση φωτογραφίας (3 κατηγορίες: portrait, landscape, group)
   /// 
-  /// Αναλύει την εικόνα και προσδιορίζει την κατηγορία της:
-  /// - Portrait, Landscape, Object, Group, Selfie, Food, Animal, Other
+  /// - portrait: 1 πρόσωπο (single person)
+  /// - landscape: 0 πρόσωπα (χωρίς άτομα)
+  /// - group: 2+ πρόσωπα (πολλά άτομα)
   Future<PhotoCategory> categorizePhoto(String imagePath) async {
-    // Desktop fallback - δεν υποστηρίζεται ML Kit
+    // Εναλλακτική για desktop - το ML Kit δεν υποστηρίζεται
     if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
-      log.info("Image categorization not supported on desktop, returning 'other'");
-      return PhotoCategory.other;
+      log.info("Η κατηγοριοποίηση εικόνων δεν υποστηρίζεται σε desktop, επιστροφή 'landscape'");
+      return PhotoCategory.landscape;
     }
 
     try {
-      // Διάβασμα εικόνας από file
       final file = File(imagePath);
       if (!await file.exists()) {
-        log.warning("Image file not found: $imagePath");
-        return PhotoCategory.other;
+        log.warning("Το αρχείο εικόνας δεν βρέθηκε: $imagePath");
+        return PhotoCategory.landscape;
       }
 
-      final bytes = await file.readAsBytes();
-      
-      // Δημιουργία InputImage με metadata
-      final inputImage = InputImage.fromBytes(
-        bytes: bytes,
-        metadata: InputImageMetadata(
-          size: Size(0, 0), // Θα προσδιοριστεί αυτόματα
-          rotation: InputImageRotation.rotation0deg,
-          format: InputImageFormat.nv21,
-          bytesPerRow: 0,
-        ),
-      );
-
-      // Χρήση Face Detection για να προσδιορίσουμε αν έχει πρόσωπα
-      // (αυτό είναι fallback μέθοδος - το Image Labeling δεν είναι διαθέσιμο)
+      // Χρήση fromFilePath για σωστό διάβασμα JPEG/PNG αρχείων
+      final inputImage = InputImage.fromFilePath(imagePath);
       final faces = await _faceDetector.processImage(inputImage);
 
       if (faces.isNotEmpty) {
-        // Αν έχει πρόσωπα, προσδιορίζουμε την κατηγορία
         if (faces.length == 1) {
-          // Ένα πρόσωπο - πιθανώς portrait ή selfie
-          // Δεν μπορούμε να ξεχωρίσουμε με ακρίβεια, οπότε επιστρέφουμε portrait
-          log.config("Detected 1 face, categorizing as portrait");
+          log.config("Ανιχνεύτηκε 1 πρόσωπο, κατηγοριοποίηση ως portrait");
           return PhotoCategory.portrait;
         } else {
-          // Πολλά πρόσωπα - group
           log.config("Detected ${faces.length} faces, categorizing as group");
           return PhotoCategory.group;
         }
       }
 
-      // Αν δεν έχει πρόσωπα, επιστρέφουμε 'other'
-      // Στο μέλλον μπορεί να προστεθεί Image Labeling για καλύτερη κατηγοριοποίηση
-      log.info("No faces detected, returning 'other' category");
-      return PhotoCategory.other;
+      // 0 πρόσωπα → landscape (χωρίς άτομα)
+      log.info("Δεν ανιχνεύτηκαν πρόσωπα, κατηγοριοποίηση ως landscape");
+      return PhotoCategory.landscape;
     } catch (e) {
       log.severe("Σφάλμα κατηγοριοποίησης φωτογραφίας: $e");
-      return PhotoCategory.other;
+      return PhotoCategory.landscape;
     }
   }
 
@@ -94,38 +72,24 @@ class MLService {
   /// Χρησιμοποιεί AI face recognition για να βρει πρόσωπα
   /// στην εικόνα. Ο χρήστης θα πρέπει να δώσει όνομα σε κάθε πρόσωπο.
   Future<List<Person>> recognizeFaces(String imagePath, int photoId) async {
-    // Desktop fallback - δεν υποστηρίζεται ML Kit
+    // Εναλλακτική για desktop - το ML Kit δεν υποστηρίζεται
     if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
-      log.info("Face recognition not supported on desktop, returning empty list");
+      log.info("Η αναγνώριση προσώπων δεν υποστηρίζεται σε desktop, επιστροφή κενής λίστας");
       return [];
     }
 
     try {
-      // Διάβασμα εικόνας από file
       final file = File(imagePath);
       if (!await file.exists()) {
-        log.warning("Image file not found: $imagePath");
+        log.warning("Το αρχείο εικόνας δεν βρέθηκε: $imagePath");
         return [];
       }
 
-      final bytes = await file.readAsBytes();
-      
-      // Δημιουργία InputImage με metadata
-      final inputImage = InputImage.fromBytes(
-        bytes: bytes,
-        metadata: InputImageMetadata(
-          size: Size(0, 0), // Θα προσδιοριστεί αυτόματα
-          rotation: InputImageRotation.rotation0deg,
-          format: InputImageFormat.nv21,
-          bytesPerRow: 0,
-        ),
-      );
-
-      // Ανίχνευση προσώπων
+      final inputImage = InputImage.fromFilePath(imagePath);
       final faces = await _faceDetector.processImage(inputImage);
 
       if (faces.isEmpty) {
-        log.info("No faces detected in image");
+        log.info("Δεν ανιχνεύτηκαν πρόσωπα στην εικόνα");
         return [];
       }
 
@@ -146,10 +110,10 @@ class MLService {
           'height': boundingBox.height.toDouble(),
         };
 
-        // Δημιουργία Person object
+        // Δημιουργία αντικειμένου Person
         // Το όνομα θα δοθεί από τον χρήστη αργότερα
         persons.add(Person(
-          name: 'Unknown ${i + 1}', // Προσωρινό όνομα
+          name: 'Άγνωστο ${i + 1}', // Προσωρινό όνομα
           photoId: photoId,
           confidence: face.trackingId != null ? 1.0 : null,
           faceCoordinates: faceCoordinates,
@@ -211,7 +175,7 @@ class MLService {
   /// Κατηγοριοποιεί και αναγνωρίζει πρόσωπα σε πολλές φωτογραφίες
   Future<void> processPhotosBatch(List<String> imagePaths) async {
     try {
-      log.info("Starting batch processing for ${imagePaths.length} photos");
+      log.info("Έναρξη batch επεξεργασίας για ${imagePaths.length} φωτογραφίες");
 
       for (int i = 0; i < imagePaths.length; i++) {
         final imagePath = imagePaths[i];
@@ -227,20 +191,20 @@ class MLService {
             log.config("Photo $i/${imagePaths.length}: Detected ${faces.length} face(s)");
           }
         } catch (e) {
-          log.warning("Error processing photo $i: $e");
+          log.warning("Σφάλμα επεξεργασίας φωτογραφίας $i: $e");
           // Συνεχίζουμε με την επόμενη φωτογραφία
         }
       }
 
-      log.info("Batch processing completed");
+      log.info("Η batch επεξεργασία ολοκληρώθηκε");
     } catch (e) {
       log.severe("Σφάλμα batch processing: $e");
     }
   }
 
-  /// Καθαρισμός resources
+  /// Καθαρισμός πόρων
   void dispose() {
     _faceDetector.close();
-    log.config("ML Service resources disposed");
+    log.config("Οι πόροι του ML Service απελευθερώθηκαν");
   }
 }

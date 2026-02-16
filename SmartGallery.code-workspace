@@ -1,11 +1,13 @@
 {
   "folders": [
     {
-      "path": "/home/ioannis/Εθνικό Μετσόβιο Πολυτεχνείο/4o Έτος/Αλληλεπίδραση Ανθρώπου Υπολογιστή/Εργαστήριο/SmartGallery"
+      "path": "D:\\Projects\\SmartGallery"
     }
   ],
   "settings": {
-    "dart.flutterSdkPath": null
+    "files.encoding": "utf8",
+    "dart.flutterSdkPath": "C:\\src\\flutter",
+    "java.configuration.updateBuildConfiguration": "interactive"
   }
 }
 

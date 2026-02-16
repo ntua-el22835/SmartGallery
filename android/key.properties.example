@@ -1,0 +1,8 @@
+# Παράδειγμα key.properties για release signing (Play Store)
+# Αντιγράψτε σε key.properties και συμπληρώστε τις τιμές.
+# Δημιουργήστε keystore με: keytool -genkey -v -keystore upload-keystore.jks -keyalg RSA -keysize 2048 -validity 10000 -alias upload
+
+storePassword=Ο_ΚΩΔΙΚΟΣ_ΣΑΣ
+keyPassword=Ο_ΚΩΔΙΚΟΣ_ΣΑΣ
+keyAlias=upload
+storeFile=../upload-keystore.jks
